@@ -1,0 +1,6 @@
+{
+	"data_directory": "data/",
+	"queryfile" : "MassQL_Queries.xlsx",
+	"cache": true,
+	"datasaver": true
+}
