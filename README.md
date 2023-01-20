@@ -1,1 +1,1 @@
-# spectra-spectre
+# SpectraSpectre
