@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 print('__________________________')
 print('')
 print("Initialize Spectra Spectre")
@@ -18,30 +24,40 @@ from scipy.integrate import trapz
 import warnings
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
-"""pyinstaller command"""
-# pyinstaller --noconfirm -F --console --collect-all "massql" --collect-all "matchms" --collect-all "pyarrow" --collect-all "pymzml"  "<absolute_path_to_script>"
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
 warnings.simplefilter(action='ignore', category=DeprecationWarning)
 pd.options.mode.chained_assignment = None  # default='warn'
 
-if getattr(sys, 'frozen', False):
-    bundle_dir = sys._MEIPASS
-else:
-    bundle_dir = os.path.dirname(os.path.abspath(__file__))
+# pyinstaller command
+# pyinstaller --noconfirm -F --console --collect-all "massql" --collect-all "matchms" --collect-all "pyarrow" --collect-all "pymzml"  "<absolute_path_to_script>"
 
-if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-    print('Running in a PyInstaller bundle')
-else:
-    print('Running in a normal Python process')
-print('')
-print( 'bundle dir is', bundle_dir )
-print( 'sys.argv[0] is', sys.argv[0] )
-print( 'sys.executable is', sys.executable )
-print( 'os.getcwd is', os.getcwd() )
-print('__________________________')
 
+# In[ ]:
+
+
+"""Do not run in Jupyter"""
+# if getattr(sys, 'frozen', False):
+#     bundle_dir = sys._MEIPASS
+# else:
+#     bundle_dir = os.path.dirname(os.path.abspath(__file__))
+
+# if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+#     print('Running in a PyInstaller bundle')
+# else:
+#     print('Running in a normal Python process')
+# print('')
+# print( 'bundle dir is', bundle_dir )
+# print( 'sys.argv[0] is', sys.argv[0] )
+# print( 'sys.executable is', sys.executable )
+# print( 'os.getcwd is', os.getcwd() )
+# print('__________________________')
+
+
+# In[2]:
+
+
+"""Configure"""
 try:
     with open("spectre_config.json") as config_file:
       config = json.load(config_file)
@@ -59,6 +75,9 @@ except FileNotFoundError as e:
     exit()
 
 
+# In[3]:
+
+
 """Definition Used to Generate a Query"""
 def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, retention_range, integration_range=None):
     query = "QUERY scaninfo(MS1DATA) FILTER MS1MZ="+     str(MS1_MZ)+":TOLERANCEPPM="+     str(MS1_MZ_tolerance_ppm)+     " AND RTMIN="+(str(retention_range[0]))+     " AND RTMAX="+str(retention_range[1])
@@ -66,6 +85,12 @@ def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, retention_range, inte
         integration_range = retention_range
     return {'name':name, 'KEGG': KEGG, 'query':query, 'retention_range': retention_range, 'integration_range': integration_range}
 
+
+
+# In[4]:
+
+
+"""Create Queries from Query File"""
 try: 
     MassQL_query_df = pd.read_excel(queryfile)
     print("\nLoaded MassQL queries from: "+str(queryfile))
@@ -87,6 +112,10 @@ except FileNotFoundError as e:
     exit()
 
 
+# In[5]:
+
+
+"""Override MassQL definition to add datasaver function"""
 def custom_load_data_mzML_pyteomics(input_filename, datasaver=datasaver):
     """
     This is a loading operation using pyteomics to help with loading mzML files with ion mobility
@@ -202,7 +231,7 @@ def custom_load_data_mzML_pyteomics(input_filename, datasaver=datasaver):
         if datasaver:
             for cat_col in ['scan', 'polarity']:
                 ms1_df = ms1_df[ms1_df[cat_col].notnull()].copy()
-                ms1_df.loc[:, cat_col] = ms1_df[cat_col].astype('category')
+                # ms1_df.loc[:, cat_col] = ms1_df[cat_col].astype('category')
             # ms1_df['scan'] = ms1_df['scan'].astype('category')
             # ms1_df['polarity'] = ms1_df['polarity'].astype('category')
 
@@ -221,11 +250,14 @@ def custom_load_data_mzML_pyteomics(input_filename, datasaver=datasaver):
         if datasaver:
             for cat_col in ['scan', 'polarity']:
                 ms2_df = ms2_df[ms2_df[cat_col].notnull()].copy()
-                ms2_df.loc[:, cat_col] = ms2_df[cat_col].astype('category')
+                # ms2_df.loc[:, cat_col] = ms2_df[cat_col].astype('category')
         if len(all_msn_mobility) == len(all_msn_i):
             ms2_df["mobility"] = all_msn_mobility
     
     return ms1_df, ms2_df
+
+
+# In[6]:
 
 
 """MassQL file loading"""
@@ -300,13 +332,21 @@ os.chdir(data_directory)
 print('Current working directory is now data directory: '+os.getcwd())
 print("")
 
+
+# In[9]:
+
+
 """Query files"""
 peak_area_df = pd.DataFrame()
 all_results_list = []
 try:
-    file_count = len(fnmatch.filter(os.listdir("DataMZML\\"), '*.mzml'))
+    # file_count = len(fnmatch.filter(os.listdir("DataMZML\\"), '*.mzml'))
+    file_count = len(fnmatch.filter(os.listdir(), '*.mzml'))
+
     if file_count == 0:
-        print('No mzml files found in '+os.getcwd()+"\\DataMZML\\\n")
+        # print('No mzml files found in '+os.getcwd()+"\\DataMZML\\\n")
+        print('No mzml files found in '+os.getcwd()+"\\\n")
+
         input("Press enter to exit...")
         exit()
 
@@ -318,34 +358,43 @@ except FileNotFoundError as e:
     exit()
 
 counter = 0
-for filepath in sorted(glob.iglob("DataMZML\\"+'*.mzML')):
+for filepath in sorted(glob.iglob('*.mzML')):
     counter += 1
     print('')
     print('----- Processing File '+str(counter)+' of '+str(file_count)+' -----')
-    filename = filepath.split('\\')[1]
+    filename = filepath
     ms1_df, ms2_df = mq_load_data(filepath, cache=cache_setting)
     for i, query in enumerate(queries):
         int_range = query['integration_range'][1] - query['integration_range'][0]
+        # print(query['query'])
+        # print(ms1_df)
+        # print(ms2_df)
+
         results_df = msql_engine.process_query(query['query'], filepath, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
         if not results_df.empty:
             results_df = results_df.loc[(results_df['rt'] > query['integration_range'][0]-(int_range/2)) & (results_df.rt<query['integration_range'][1]+(int_range/2))]
-            results_df_i = results_df.loc[(results_df['rt'] > query['integration_range'][0]) & (results_df.rt<query['integration_range'][1])].copy()
-            peak_area = trapz(results_df_i.i, x=results_df_i.rt)
-            results_df_i = pd.DataFrame()
-            peak_area_df.at[filename, 'file_directory'] = os.getcwd()+"\\DataMZML"
-            peak_area_df.at[filename, query['name']] = peak_area
-            results_df.loc[:, "query_name"] = query['name']
-            results_df.loc[:, "file"] = os.getcwd()+"\\"+filepath
-            results_df.loc[:, "file_directory"] = os.getcwd()+"\\DataMZML"
-            results_df.loc[:, "filename"] = filename
-            if datasaver:
-                for cat_col in ['mslevel', 'query_name', 'file', 'file_directory', 'filename']:
-                    results_df = results_df[results_df[cat_col].notnull()].copy()
-                    results_df.loc[:, cat_col] = results_df[cat_col].astype('category')
+            if len(results_df) > 1:
+                results_df_i = results_df.loc[(results_df['rt'] > query['integration_range'][0]) & (results_df.rt<query['integration_range'][1])].copy()
+                peak_area = trapz(results_df_i.i, x=results_df_i.rt)
+                results_df_i = pd.DataFrame()
+                peak_area_df.at[filename, 'file_directory'] = os.getcwd()
+                peak_area_df.at[filename, query['name']] = peak_area
+                results_df.loc[:, "query_name"] = query['name']
+                results_df.loc[:, "file"] = os.getcwd()+"\\"+filepath
+                results_df.loc[:, "file_directory"] = os.getcwd()
+                results_df.loc[:, "filename"] = filename
+                if datasaver:
+                    for cat_col in ['mslevel', 'query_name', 'file', 'file_directory', 'filename']:
+                        results_df = results_df[results_df[cat_col].notnull()].copy()
+                        # results_df.loc[:, cat_col] = results_df[cat_col].astype('category')
+                all_results_list.append(results_df)
+            else:
+                peak_area_df.at[filename, 'file_directory'] = os.getcwd()
+                peak_area_df.at[filename, query['name']] = 0 
         else:
-            peak_area_df.at[filename, 'file_directory'] = os.getcwd()+"\\DataMZML"
+            peak_area_df.at[filename, 'file_directory'] = os.getcwd()
             peak_area_df.at[filename, query['name']] = 0 
-        all_results_list.append(results_df)
+        
 results_df = pd.concat(all_results_list)
 # print(results_df.memory_usage(index=True, deep=True).sum()/1000000000)
 
@@ -354,8 +403,11 @@ if results_df.empty:
     input("Press enter to exit...")
     exit()
 
+
+# In[19]:
+
+
 """Integrate and Plot Results"""
-timestr = time.strftime("%Y_%m_%d_%H%M")
 for i, query in enumerate(queries):
     int_range = query['integration_range'][1] - query['integration_range'][0]
     fig1 = plt.figure(figsize=(12,8))
@@ -394,10 +446,11 @@ for i, query in enumerate(queries):
     y_low, y_high = fig1_sub2.get_ylim()
     fig1_sub2.set_aspect(abs((x_right-x_left)/(y_low-y_high))*ratio)
 
-
+"""Save Results to Files"""
+timestr = time.strftime("%Y_%m_%d_%H%M")
 def save_image(filename):
     p = PdfPages(filename)
-    fig_nums = plt.get_fignums()  
+    fig_nums = plt.get_fignums()
     figs = [plt.figure(n) for n in fig_nums]
     for fig in figs: 
         fig.savefig(p, format='pdf') 
@@ -408,16 +461,33 @@ if not os.path.exists("SpectraSpectre_Output/"+timestr):
 pdf_filename = "SpectraSpectre_Output/"+timestr+"/"+timestr+"_images.pdf"  
 save_image(pdf_filename) 
 
+peak_area_df_new = peak_area_df.reset_index(names=['CORE_Filename'])
 
-peak_area_df = peak_area_df.reset_index(names=['CORE_Filename'])
-if not os.path.exists("SpectraSpectre_Output/"+timestr):
-    os.makedirs("SpectraSpectre_Output/"+timestr)
 with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results.xlsx") as writer:
-    peak_area_df.to_excel(writer, sheet_name="results", index=False)
+    peak_area_df_new.to_excel(writer, sheet_name="results", index=False)
     MassQL_query_df.to_excel(writer, sheet_name="queries", index=False)
 
+peak_area_df_biopan = peak_area_df_new.drop(columns=['file_directory'])
+
+def remove_filename_ext(filenameext):
+    filenameext = str(filenameext)  # cast to string
+    filenamenoext = filenameext[:-5] # remove last five characters
+    return str(filenamenoext)
+
+peak_area_df_biopan['CORE_Filename'] =peak_area_df_biopan['CORE_Filename'].apply(remove_filename_ext)
+
+peak_area_df_biopan.set_index('CORE_Filename',inplace=True)
+peak_area_df_biopan = peak_area_df_biopan.T
+peak_area_df_biopan.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results_biopan.csv")  
 
 print("\nResults saved to:")
 print(os.getcwd()+"\\SpectraSpectre_Output\n")
 print('Complete\n')
-input("Press enter to exit...")
+# input("Press enter to exit...")
+
+
+# In[ ]:
+
+
+
+

@@ -1,5 +1,5 @@
 {
-	"data_directory": "data/",
+	"data_directory": "data/DataMZML/",
 	"queryfile" : "MassQL_Queries.xlsx",
 	"cache": true,
 	"datasaver": true
