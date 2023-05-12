@@ -99,13 +99,14 @@ try:
     queries = []
     for index, row in MassQL_query_df.iterrows():
         if row['ion_mode'] == 1:
-            MS1MZ = row['M+H']
+            MS1MZ = row['Monoisotopic'] + 1.0073
         else:
-            MS1MZ = row['M-H']
-        if row['INTEGRATION_MIN'] != 'Null':
-            queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX']), (row['INTEGRATION_MIN'], row['INTEGRATION_MAX'])))
-        else:
-            queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX'])))
+            MS1MZ = row['Monoisotopic'] - 1.0073
+        queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX'])))
+        # if row['INTEGRATION_MIN'] != 'Null':
+        #     queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX']), (row['INTEGRATION_MIN'], row['INTEGRATION_MAX'])))
+        # else:
+        #     queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX'])))
 except FileNotFoundError as e:
     print(f"FileNotFoundError\n"
           f"{e} \n"
@@ -375,9 +376,7 @@ for filepath in sorted(glob.iglob('*.mzML')):
         results_df = msql_engine.process_query(query['query'], filepath, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
         if not results_df.empty:
             results_df = results_df.loc[(results_df['rt'] > query['integration_range'][0]-(int_range/2)) & (results_df.rt<query['integration_range'][1]+(int_range/2))]
-
             if len(results_df) > 1:
-                
                 results_df_i = results_df.loc[(results_df['rt'] > query['integration_range'][0]) & (results_df.rt<query['integration_range'][1])].copy()
                 peak_area = trapz(results_df_i.i, x=results_df_i.rt)
                 results_df_i = pd.DataFrame()
@@ -398,8 +397,9 @@ for filepath in sorted(glob.iglob('*.mzML')):
         else:
             peak_area_df.at[filename, 'file_directory'] = os.getcwd()
             peak_area_df.at[filename, query['name']] = 0 
-        
-results_df = pd.concat(all_results_list)
+
+if all_results_list:        
+    results_df = pd.concat(all_results_list)
 # print(results_df.memory_usage(index=True, deep=True).sum()/1000000000)
 
 if results_df.empty:
@@ -519,7 +519,7 @@ else:
 
     for index, row in MassQL_query_df.iterrows():
         qname = row['Name']
-        qthreshold = row['threshold']
+        qthreshold = row['QC_threshold']
         qave = QC_df.loc[:, qname].mean()
         peak_area_df_QC2[qname] = peak_area_df_QC2[qname].apply(lambda x: 1 if qave==x else (None if qave == 0 else x/qave))
 
@@ -527,7 +527,7 @@ else:
 
     for index, row in MassQL_query_df.iterrows():
         qname = row['Name']
-        qthreshold = row['threshold']
+        qthreshold = row['QC_threshold']
         peak_area_df_QC3[qname] = peak_area_df_QC3[qname].apply(lambda x: True if math.isclose(1,x,abs_tol=qthreshold) else False)
 
     peak_area_df_QC = peak_area_df_QC3.copy()
