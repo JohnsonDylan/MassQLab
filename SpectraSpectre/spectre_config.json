@@ -1,6 +1,7 @@
 {
 	"data_directory": "data/DataMZML/",
 	"queryfile" : "MassQL_Queries.xlsx",
+	"QC_files" : ["QC_2022MCF0031_p_QCcurve_02_01"],
 	"cache": true,
 	"datasaver": true
 }
