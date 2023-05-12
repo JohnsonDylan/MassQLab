@@ -25,7 +25,7 @@ Custom usage:
 ## Query File
 The query file (MassQL_Queries.xlsx by default) is used to define the parameters that will compose a MassQL query.
 The column headers should not be changed as they are required by SpectraSpectre.
-Example queries are included by default but should be modified to accomodate your data.
+Example queries are included by default but should be modified to acommodate your data.
 
 Description of column headers:  
 >* Name: Name of query, likely the component to be identified  
@@ -36,7 +36,7 @@ Description of column headers:
 >* TOLERANCEPPM: The tolerance for the m/z in parts per million  
 >* RTMIN: The minimum value in the retention time range  
 >* RTMAX: The maximum value in the retention time range  
->* QC_threshold: The tolerance for validating files versus QC standard(s). ie. 0.2 refers to a 20% threshold. (Not required for regular usaged, see "Sytem Suitability" section below)  
+>* QC_threshold: The tolerance for validating files versus QC standard(s). ie. 0.2 refers to a 20% threshold. (Not required for regular usage, see "System Suitability" section below)  
 
 ## System Suitability
 SpectraSpectre is useful for rapidly validating analytical instrumentation performance by comparing new data versus an established quality control.
