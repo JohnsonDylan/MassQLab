@@ -25,13 +25,17 @@ import warnings
 import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-warnings.simplefilter(action='ignore', category=FutureWarning)
+import subprocess
 
+warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=DeprecationWarning)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # pyinstaller command
-# pyinstaller --noconfirm -F --console --collect-all "massql" --collect-all "matchms" --collect-all "pyarrow" --collect-all "pymzml"  "<absolute_path_to_script>"
+# pyinstaller --noconfirm --noupx -F --console --collect-all "massql" --collect-all "matchms" --collect-all "pyarrow" --collect-all "pymzml" --exclude-module "kaleido"  "<absolute_path_to_script>"
+
+# Convert jupyter notebok to script
+# jupyter nbconvert --to script "<absolute_path_to_notebook>.ipynb"
 
 
 # In[ ]:
@@ -62,13 +66,24 @@ pd.options.mode.chained_assignment = None  # default='warn'
 try:
     with open("spectre_config.json") as config_file:
         config = json.load(config_file)
+        use_queryfile = config['use_queryfile']
+        queryfile = config['queryfile']
+        print("Query File Excel: "+str(queryfile))
+        use_queryfilejson = config['use_queryfile_json']
+        queryfilejson = config['queryfile_json']
+        print("Query File JSON: "+str(queryfilejson))
         cache_setting = config['cache']
         print("Use Cache: "+str(cache_setting))
-        queryfile = config['queryfile']
         datasaver = config['datasaver']
         print("Use Datasaver: "+str(datasaver))
         data_directory = config['data_directory']
+        print("Data Directory: "+str(data_directory))
         QC_files = config['QC_files']
+        convert_raw = config['convert_raw']
+        print("Convert raw: "+str(convert_raw))
+        msconvertexe = config['msconvert_exe']
+        if convert_raw:
+            print("MSConvert exe: "+str(msconvertexe))
 except FileNotFoundError as e:
     print(f"FileNotFoundError\n"
           f"{e} \n"
@@ -80,37 +95,52 @@ except FileNotFoundError as e:
 # In[ ]:
 
 
-"""Definition Used to Generate a Query"""
-def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, retention_range, integration_range=None):
-    query = "QUERY scaninfo(MS1DATA) FILTER MS1MZ="+     str(MS1_MZ)+":TOLERANCEPPM="+     str(MS1_MZ_tolerance_ppm)+     " AND RTMIN="+(str(retention_range[0]))+     " AND RTMAX="+str(retention_range[1])
-    if integration_range is None:
-        integration_range = retention_range
-    return {'name':name, 'KEGG': KEGG, 'query':query, 'retention_range': retention_range, 'integration_range': integration_range}
-
+"""Definition Used to Generate a Query from Excel"""
+def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, rtmin, rtmax):
+    query = "QUERY scaninfo(MS1DATA) FILTER MS1MZ="+     str(MS1_MZ)+":TOLERANCEPPM="+     str(MS1_MZ_tolerance_ppm)+     " AND RTMIN="+(str(rtmin))+     " AND RTMAX="+str(rtmax)
+    return {'name':name, 'KEGG': KEGG, 'query':query, 'rtmin': str(rtmin), 'rtmax': str(rtmax)}
 
 
 # In[ ]:
 
 
 """Create Queries from Query File"""
-try: 
-    MassQL_query_df = pd.read_excel(queryfile)
-    print("\nLoaded MassQL queries from: "+str(queryfile))
-    queries = []
-    for index, row in MassQL_query_df.iterrows():
-        if row['ion_mode'] == 1:
-            MS1MZ = row['Monoisotopic'] + 1.0073
-        else:
-            MS1MZ = row['Monoisotopic'] - 1.0073
-        queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX'])))
-        # if row['INTEGRATION_MIN'] != 'Null':
-        #     queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX']), (row['INTEGRATION_MIN'], row['INTEGRATION_MAX'])))
-        # else:
-        #     queries.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], (row['RTMIN'], row['RTMAX'])))
-except FileNotFoundError as e:
-    print(f"FileNotFoundError\n"
-          f"{e} \n"
-          f"Not found in "+os.getcwd()+"\n")
+queries_excel = []
+if use_queryfile:
+    if queryfile:
+        try: 
+            MassQL_query_df = pd.read_excel(queryfile)
+            print("\nLoaded MassQL queries from: "+str(queryfile)+"\n")
+            for index, row in MassQL_query_df.iterrows():
+                if row['ion_mode'] == 1:
+                    MS1MZ = row['Monoisotopic'] + 1.00725
+                else:
+                    MS1MZ = row['Monoisotopic'] - 1.00725
+                queries_excel.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], row['RTMIN'], row['RTMAX']))
+        except FileNotFoundError as e:
+            print(f"FileNotFoundError\n"
+                  f"{e} \n"
+                  f"Not found in "+os.getcwd()+"\n")
+
+queries_json = []
+if use_queryfilejson:
+    if queryfilejson:
+        try:
+            with open(queryfilejson) as queryfilej:
+                queryjson = json.load(queryfilej)
+                print("\nLoaded MassQL queries from: "+str(queryfilejson)+"\n")
+                for entry in queryjson:
+                    queries_json.append(entry)
+        except FileNotFoundError as e:
+            print(f"FileNotFoundError\n"
+                  f"{e} \n"
+                  f"Not found in "+os.getcwd()+"\n")
+        
+queries = queries_excel + queries_json
+if queries:
+    print("\nCreated " + str(len(queries)) + " MassQL Queries")
+else:
+    print("No Queries Found")
     input("Press enter to exit...")
     exit()
 
@@ -339,6 +369,46 @@ print("")
 # In[ ]:
 
 
+"""Convert raw files"""
+path = os.getcwd()
+convert_count = 0
+if convert_raw and msconvertexe:
+    try:
+        subprocess.run(msconvertexe, 
+                       stdout=subprocess.DEVNULL, 
+                       stderr=subprocess.STDOUT, 
+                       creationflags=subprocess.CREATE_NO_WINDOW)
+        for fn in os.listdir(path):
+            if ".raw" in fn:
+                if os.path.isfile(path + '\\' + fn.replace('.raw','.mzML')):
+                    pass
+                    # print (path +"\\"+ fn + " already exists")
+                else:
+                    print (path + '\\' + fn + " not converted yet!!") 
+                    subprocess.run(msconvertexe + " " + fn +  " --zlib", 
+                                  stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.STDOUT,
+                                   creationflags=subprocess.CREATE_NO_WINDOW)
+                    print(msconvertexe + " " + fn +  " --zlib")
+                    if os.path.isfile(path + '\\' + fn.replace('.raw','.mzML')):
+                        print (path + '\\' + fn + " conversion completed!")
+                        convert_count += 1
+                    else:
+                        print (path + '\\' + fn + " conversion FAILED!")
+    except Exception:
+        print("Path to MSConvert is Invalid. No raw files will be converted.")
+else:
+    print("Not converting raw files (if any)")
+
+if convert_count == 0:
+    print("No files converted")
+elif convert_count > 0:
+    print(str(convert_count) + " file(s) converted")
+
+
+# In[ ]:
+
+
 """Query files"""
 peak_area_df = pd.DataFrame()
 all_results_list = []
@@ -371,14 +441,25 @@ for filepath in sorted(glob.iglob('*.mzML')):
     filename = filepath
     ms1_df, ms2_df = mq_load_data(filepath, cache=cache_setting)
     for i, query in enumerate(queries):
-        int_range = float(query['integration_range'][1]) - float(query['integration_range'][0])
-
-        results_df = msql_engine.process_query(query['query'], filepath, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
+        int_range = float(query['rtmax']) - float(query['rtmin'])
+        results_df = pd.DataFrame()
+        try:
+            results_df = msql_engine.process_query(query['query'], filepath, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
+        except Exception:
+            print('Query failure\n' + 'File: ' + str(filename) + '\nQuery: ' + str(query['query']))
+            print('Query will fail if running MS2 query on file without MS2 data')
+            pass 
         if not results_df.empty:
-            results_df = results_df.loc[(results_df['rt'] > query['integration_range'][0]-(int_range/2)) & (results_df.rt<query['integration_range'][1]+(int_range/2))]
-            if len(results_df) > 1:
-                results_df_i = results_df.loc[(results_df['rt'] > query['integration_range'][0]) & (results_df.rt<query['integration_range'][1])].copy()
-                peak_area = trapz(results_df_i.i, x=results_df_i.rt)
+            results_df = results_df.loc[(results_df['rt'] > float(query['rtmin'])-(int_range/2)) & (results_df.rt<float(query['rtmax'])+(int_range/2))]
+            if len(results_df) > 0:
+                results_df_i = results_df.loc[(results_df['rt'] > float(query['rtmin'])) & (results_df.rt<float(query['rtmax']))].copy()
+                if len(results_df_i) > 0:
+                    if len(results_df_i) > 1:
+                        peak_area = trapz(results_df_i.i, x=results_df_i.rt)
+                    else:
+                        peak_area = sum(results_df_i.loc[:,"i"])
+                else:
+                    peak_area = 0
                 results_df_i = pd.DataFrame()
                 peak_area_df.at[filename, 'file_directory'] = os.getcwd()
                 peak_area_df.at[filename, query['name']] = peak_area
@@ -413,17 +494,17 @@ if results_df.empty:
 
 """Integrate and Plot Results"""
 for i, query in enumerate(queries):
-    int_range = query['integration_range'][1] - query['integration_range'][0]
+    int_range = float(query['rtmax']) - float(query['rtmin'])
     fig1 = plt.figure(figsize=(12,8))
     plt.subplots_adjust(bottom=0.3, top=.9, wspace = .1)
     fig1.suptitle(query['name'], y = .96, fontsize=16)
     fig1_sub1 = fig1.add_subplot(121, title='Intensity vs RT', xlabel='retention time', ylabel='intensity')
     fig1_sub1.title.set_size(14)
-    fig1_sub1.axvline(x=query['retention_range'][0], color='b')
-    fig1_sub1.axvline(x=query['retention_range'][1], color='b')
-    fig1_sub1.axvline(x=query['integration_range'][0], color='r', linestyle='--')
-    fig1_sub1.axvline(x=query['integration_range'][1], color='r', linestyle='--')
-    fig1_sub1.set_xlim([query['integration_range'][0]-(int_range/2), query['integration_range'][1]+(int_range/2)])
+    fig1_sub1.axvline(x=float(query['rtmin']), color='b')
+    fig1_sub1.axvline(x=float(query['rtmax']), color='b')
+    fig1_sub1.axvline(x=float(query['rtmin']), color='r', linestyle='--')
+    fig1_sub1.axvline(x=float(query['rtmax']), color='r', linestyle='--')
+    fig1_sub1.set_xlim([float(query['rtmin'])-(int_range/2), float(query['rtmax'])+(int_range/2)])
     fig1_sub1.set_ylabel('Intensity', fontsize=12)
     fig1_sub1.set_xlabel('Retention Time', fontsize=12)
     fig1_sub2 = fig1.add_subplot(122, title='peak area')
@@ -555,5 +636,5 @@ else:
     print('\n')
 
 print('Complete\n')
-# input("Press enter to exit...")
+input("Press enter to exit...")
 
