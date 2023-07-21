@@ -1,29 +1,26 @@
 [
 	{
-	"name": "ms1_test", 
+	"name": "PC_test", 
 	"KEGG": "not applicable", 
-	"query": "QUERY scaninfo(MS1DATA) WHERE MS2PROD=226.18:TOLERANCEPPM=5 AND RTMIN=0.12 AND RTMAX=0.16", 
-	"rtmin": "0.12",
-	"rtmax": "0.16"
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=184.0733:TOLERANCEPPM=10 AND RTMIN=10.0 AND RTMAX=17.0",
+	"rtmin": "10.0",
+	"rtmax": "17.0"
 	},
 	{
-	"name": "ms2_test", 
+	"name": "PE_test", 
 	"KEGG": "not applicable", 
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=226.18:TOLERANCEPPM=5 AND RTMIN=0.12 AND RTMAX=0.16", 
-	"rtmin": "0.12",
-	"rtmax": "0.16"
-	},
-	{"name": "ms1_test2", 
-	"KEGG": "not applicable", 
-	"query": "QUERY scaninfo(MS1DATA) WHERE MS2PROD=226.18:TOLERANCEPPM=100 AND RTMIN=0.02 AND RTMAX=0.26", 
-	"rtmin": "0.02",
-	"rtmax": "0.26"
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2NL=141.0191:TOLERANCEPPM=10 AND RTMIN=10.0 AND RTMAX=17.0",
+	"rtmin": "10.0",
+	"rtmax": "17.0"
 	},
 	{
-	"name": "ms2_test2", 
+	"name": "PS_test", 
 	"KEGG": "not applicable", 
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=226.18:TOLERANCEPPM=100 AND RTMIN=0.02 AND RTMAX=0.26", 
-	"rtmin": "0.02",
-	"rtmax": "0.26"
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2NL=185.0089:TOLERANCEPPM=10 AND RTMIN=10.0 AND RTMAX=17.0",
+	"rtmin": "10.0",
+	"rtmax": "17.0"
 	}
+
 ]
+
+

@@ -7,6 +7,7 @@
 	"convert_raw": false,
 	"msconvert_exe": "C:/Users/johnsondyj/AppData/Local/Apps/ProteoWizard 3.0.23118.b2ed96f 64-bit/msconvert.exe",
 	"QC_files" : ["QC_2022MCF0031_p_QCcurve_02_01"],
+	"kegg_path": false,
 	"cache": true,
-	"datasaver": true
+	"datasaver": false
 }

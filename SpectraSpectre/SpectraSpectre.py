@@ -31,6 +31,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=DeprecationWarning)
 pd.options.mode.chained_assignment = None  # default='warn'
 
+starting_directory = os.getcwd()
 # pyinstaller command
 # pyinstaller --noconfirm --noupx -F --console --collect-all "massql" --collect-all "matchms" --collect-all "pyarrow" --collect-all "pymzml" --exclude-module "kaleido"  "<absolute_path_to_script>"
 
@@ -79,6 +80,7 @@ try:
         data_directory = config['data_directory']
         print("Data Directory: "+str(data_directory))
         QC_files = config['QC_files']
+        kegg_path = config['kegg_path']
         convert_raw = config['convert_raw']
         print("Convert raw: "+str(convert_raw))
         msconvertexe = config['msconvert_exe']
@@ -106,6 +108,8 @@ def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, rtmin, rtmax):
 
 """Create Queries from Query File"""
 queries_excel = []
+name_kegg_dict = {}
+MassQL_query_df = pd.DataFrame()
 if use_queryfile:
     if queryfile:
         try: 
@@ -117,6 +121,7 @@ if use_queryfile:
                 else:
                     MS1MZ = row['Monoisotopic'] - 1.00725
                 queries_excel.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], row['RTMIN'], row['RTMAX']))
+                name_kegg_dict.update({row['Name']: row['KEGG']})
         except FileNotFoundError as e:
             print(f"FileNotFoundError\n"
                   f"{e} \n"
@@ -411,6 +416,7 @@ elif convert_count > 0:
 
 """Query files"""
 peak_area_df = pd.DataFrame()
+raw_df = pd.DataFrame()
 all_results_list = []
 try:
     # file_count = len(fnmatch.filter(os.listdir("DataMZML\\"), '*.mzml'))
@@ -432,7 +438,6 @@ except FileNotFoundError as e:
 
 import scipy.signal
 
-    
 counter = 0
 for filepath in sorted(glob.iglob('*.mzML')):
     counter += 1
@@ -445,40 +450,41 @@ for filepath in sorted(glob.iglob('*.mzML')):
         results_df = pd.DataFrame()
         try:
             results_df = msql_engine.process_query(query['query'], filepath, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
+
         except Exception:
             print('Query failure\n' + 'File: ' + str(filename) + '\nQuery: ' + str(query['query']))
             print('Query will fail if running MS2 query on file without MS2 data')
             pass 
-        if not results_df.empty:
-            results_df = results_df.loc[(results_df['rt'] > float(query['rtmin'])-(int_range/2)) & (results_df.rt<float(query['rtmax'])+(int_range/2))]
-            if len(results_df) > 0:
-                results_df_i = results_df.loc[(results_df['rt'] > float(query['rtmin'])) & (results_df.rt<float(query['rtmax']))].copy()
-                if len(results_df_i) > 0:
-                    if len(results_df_i) > 1:
-                        peak_area = trapz(results_df_i.i, x=results_df_i.rt)
-                    else:
-                        peak_area = sum(results_df_i.loc[:,"i"])
+        raw_massql_df = results_df.copy()
+        raw_massql_df['filename'] = filename
+        raw_massql_df['query'] = query['name']
+        raw_df = pd.concat([raw_df, raw_massql_df], ignore_index=True)
+        raw_massql_df = pd.DataFrame()
+        if not results_df.empty and 'rt' in results_df.columns and len(results_df) > 0:
+            # results_df = results_df.loc[(results_df['rt'] > float(query['rtmin'])-(int_range/2)) & (results_df.rt<float(query['rtmax'])+(int_range/2))]
+            results_df_i = results_df.loc[(results_df['rt'] > float(query['rtmin'])) & (results_df.rt<float(query['rtmax']))].copy()
+            if len(results_df_i) > 0:
+                if len(results_df_i) > 1:
+                    peak_area = trapz(results_df_i.i, x=results_df_i.rt)
                 else:
-                    peak_area = 0
-                results_df_i = pd.DataFrame()
-                peak_area_df.at[filename, 'file_directory'] = os.getcwd()
-                peak_area_df.at[filename, query['name']] = peak_area
-                results_df.loc[:, "query_name"] = query['name']
-                results_df.loc[:, "file"] = os.getcwd()+"\\"+filepath
-                results_df.loc[:, "file_directory"] = os.getcwd()
-                results_df.loc[:, "filename"] = filename
-                if datasaver:
-                    for cat_col in ['mslevel', 'query_name', 'file', 'file_directory', 'filename']:
-                        results_df = results_df[results_df[cat_col].notnull()].copy()
-                        # results_df.loc[:, cat_col] = results_df[cat_col].astype('category')
-                all_results_list.append(results_df)
+                    peak_area = sum(results_df_i.loc[:,"i"])
             else:
-                peak_area_df.at[filename, 'file_directory'] = os.getcwd()
-                peak_area_df.at[filename, query['name']] = 0 
+                peak_area = 0
+            results_df_i = pd.DataFrame()
+            peak_area_df.at[filename, 'file_directory'] = os.getcwd()
+            peak_area_df.at[filename, query['name']] = peak_area
+            results_df.loc[:, "query_name"] = query['name']
+            results_df.loc[:, "file"] = os.getcwd()+"\\"+filepath
+            results_df.loc[:, "file_directory"] = os.getcwd()
+            results_df.loc[:, "filename"] = filename
+            if datasaver:
+                for cat_col in ['mslevel', 'query_name', 'file', 'file_directory', 'filename']:
+                    results_df = results_df[results_df[cat_col].notnull()].copy()
+                    # results_df.loc[:, cat_col] = results_df[cat_col].astype('category')
+            all_results_list.append(results_df)
         else:
             peak_area_df.at[filename, 'file_directory'] = os.getcwd()
-            peak_area_df.at[filename, query['name']] = 0 
-
+            peak_area_df.at[filename, query['name']] = 0
 if all_results_list:        
     results_df = pd.concat(all_results_list)
 # print(results_df.memory_usage(index=True, deep=True).sum()/1000000000)
@@ -487,6 +493,8 @@ if results_df.empty:
     print('\nNo matches for any query in any datafile\n')
     input("Press enter to exit...")
     exit()
+
+# display(raw_df)
 
 
 # In[ ]:
@@ -544,14 +552,18 @@ def save_image(filename):
 if not os.path.exists("SpectraSpectre_Output/"+timestr):
     os.makedirs("SpectraSpectre_Output/"+timestr)
 pdf_filename = "SpectraSpectre_Output/"+timestr+"/"+timestr+"_images.pdf"  
-save_image(pdf_filename) 
+save_image(pdf_filename)
 
-peak_area_df_new = peak_area_df.reset_index(names=['CORE_Filename'])
+# peak_area_df_new = peak_area_df.reset_index(names=['CORE_Filename'])
+peak_area_df_new = peak_area_df.reset_index()
+peak_area_df_new = peak_area_df_new.rename(columns = {'index':'CORE_Filename'})
 
+raw_df.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_raw_query_df.csv")  
 
 with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results.xlsx") as writer:
     peak_area_df_new.to_excel(writer, sheet_name="results", index=False)
-    MassQL_query_df.to_excel(writer, sheet_name="queries", index=False)
+    if not MassQL_query_df.empty:
+        MassQL_query_df.to_excel(writer, sheet_name="queries", index=False)
 
     
     
@@ -580,6 +592,8 @@ print(os.getcwd()+"\\SpectraSpectre_Output\n")
 QC_df = peak_area_df_new[peak_area_df_new['CORE_Filename'].str.startswith(tuple(QC_files)) | peak_area_df_new['CORE_Filename'].str.startswith('QC_')]
 # QC_df = peak_area_df_new[peak_area_df_new['CORE_Filename'].str.startswith('QC_')]
 if QC_df.empty:
+    print("No System Suitability Check\n")
+elif not MassQL_query_df:
     print("No System Suitability Check\n")
 else:
     peak_area_df_QC1 = peak_area_df_new.copy()
@@ -634,6 +648,135 @@ else:
     print('\n')
     print(peak_area_df_QC)
     print('\n')
+
+
+
+# In[ ]:
+
+
+if kegg_path:
+    # os.chdir(starting_directory)
+    import Bio
+    Bio.__version__
+
+    from Bio import SeqIO
+    from Bio.KEGG.REST import *
+    from Bio.KEGG.KGML import KGML_parser
+    from Bio.Graphics.KGML_vis import KGMLCanvas
+    from Bio.Graphics.ColorSpiral import ColorSpiral
+    from IPython.display import Image, HTML
+    import random
+    from pdf2image import convert_from_path
+    from IPython.display import Image 
+
+    # A bit of code that will help us display the PDF output
+    def PDF(filename):
+        return HTML('<iframe src=%s width=700 height=350></iframe>' % filename)
+
+    # A bit of helper code to shorten long text
+    def head(text, lines=10):
+        """ Print the first lines lines of the passed text."""
+        print('\n'.join(text.split('\n')[:lines] + ['[...]']))
+
+    def rgb_to_hex(rgb):
+        rgb = tuple([int(val) for val in rgb])
+        return '#' + ''.join([hex(val)[2:] for val in rgb]).upper()
+
+    peak_area_df_transform = peak_area_df_new.copy()
+    def transform_func(number):
+        return np.log2(1+number)
+
+    # executing the function
+    bad_column = ["CORE_Filename", "file_directory"]
+    other_cols = peak_area_df_transform.columns.difference(bad_column)
+    peak_area_df_transform[other_cols] = peak_area_df_transform[other_cols].apply(transform_func)
+    peak_area_df_transform[other_cols]= peak_area_df_transform[other_cols].div(peak_area_df_transform[other_cols].iloc[0])
+
+    # displaying the DataFrame
+    # display(peak_area_df_transform)
+
+    shade_dict = {}
+    for index, row in peak_area_df_transform[other_cols].iterrows():
+        if index == 0:
+            pass
+        else:
+            for col_name in peak_area_df_transform[other_cols].columns:
+                # print(f"{col_name}: {row[col_name]}")
+                if col_name in name_kegg_dict.keys():
+                    cid = str(name_kegg_dict[col_name])
+                    cid = cid.replace(u'\xa0', u'')
+                    if row[col_name] > 1.1:
+                        mer = rgb_to_hex([255,255*(1/row[col_name]),255*(1/row[col_name])])
+                    elif row[col_name] <= 1.1 and row[col_name] >= 0.9:
+                        mer = rgb_to_hex([255,255,255])
+                    elif row[col_name] > 0 and row[col_name] < 0.9:
+                        mer = rgb_to_hex([255*(row[col_name]),255*(row[col_name]),255])
+                    else:
+                        mer = rgb_to_hex([150,150,150])
+                    shade_dict.update({str(cid):mer})
+
+                    # from reportlab.lib.colors import HexColor
+    # pathway = KGML_parser.read(kegg_get("hsa00020", "kgml"))
+    try:
+        pathway = KGML_parser.read(kegg_get(kegg_path, "kgml"))
+
+        print(pathway)
+
+        for x in pathway.compounds:
+            # print(str(shade_dict[x.graphics[0].name]))
+            # print(shade_dict)
+            try:
+                x.graphics[0].bgcolor = str(shade_dict[x.graphics[0].name]) + str('CC')
+                # x.graphics[0].fgcolor = str(shade_dict[x.graphics[0].name])
+                if shade_dict[x.graphics[0].name] == '#FFFFFF' or shade_dict[x.graphics[0].name] == "#969696":   
+                    x.graphics[0].fgcolor = "#000000" + str('66')
+                else:
+                    x.graphics[0].fgcolor = str(shade_dict[x.graphics[0].name]) + str('CC')
+            except Exception:
+                pass
+                # print('no match')
+            x.graphics[0].type="circle"
+            # x.graphics[0].fgcolor = "#d1d1d1"
+            x.graphics[0].width = 30
+            x.graphics[0].height = 17
+
+        for x in pathway.orthologs:
+            x.graphics[0].fgcolor = "#b3b3b3"
+            x.graphics[0].bgcolor = "#ffffff"
+            # x.graphics[0].width = 40
+            # x.graphics[0].height = 40
+
+        for x in pathway.genes:
+            x.graphics[0].fgcolor = "#b3b3b3"
+            x.graphics[0].bgcolor = "#ffffff"
+            # x.graphics[0].width = 40
+            # x.graphics[0].height = 40
+
+        for x in pathway.genes:
+            x.graphics[0].fgcolor = "#b3b3b3"
+            x.graphics[0].bgcolor = "#ffffff"
+            # x.graphics[0].width = 40
+            # x.graphics[0].height = 40
+
+        canvas = KGMLCanvas(pathway, import_imagemap=True)
+        kegg_pdf_path = "SpectraSpectre_Output/"+timestr+"/"+timestr+"_kegg_map_"+kegg_path+".pdf"
+        canvas.draw(kegg_pdf_path)
+        # PDF("fab_map_with_image.pdf")
+
+        # Store Pdf with convert_from_path function
+        poppler = False
+        if poppler:
+            images = convert_from_path(kegg_pdf_path, poppler_path = r"C:\ProgramFilesFolder\poppler-23.07.0\Library\bin")
+            for i in range(len(images)):
+                images[i].save('page'+ str(i) +'.jpg', 'JPEG')
+            Image("SpectraSpectre_Output/"+timestr+"/"+timestr+"_kegg_map_"+kegg_path+".jpg")
+        print("Created KEGG map")
+    except Exception:
+        print("Problem Creating KEGG map \n\n Try disabling VPN if active \n")
+
+
+# In[ ]:
+
 
 print('Complete\n')
 input("Press enter to exit...")
