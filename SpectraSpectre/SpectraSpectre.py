@@ -1,31 +1,23 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 print('__________________________')
 print('')
 print("Initialize Spectra Spectre")
 print('__________________________')
-import os
-import sys
-import json
-import time
-import massql
+import os, sys, json, time, fnmatch, glob, warnings, math, subprocess
 from massql import msql_fileloading, msql_engine
 import pandas as pd
 from tqdm import tqdm
 from pyteomics import mzxml, mzml
 import numpy as np
-import fnmatch
-import glob
 from scipy.integrate import trapz
-import warnings
-import math
+import scipy.signal
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-import subprocess
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=DeprecationWarning)
@@ -39,7 +31,7 @@ starting_directory = os.getcwd()
 # jupyter nbconvert --to script "<absolute_path_to_notebook>.ipynb"
 
 
-# In[ ]:
+# In[2]:
 
 
 """Do not run in Jupyter"""
@@ -60,7 +52,7 @@ starting_directory = os.getcwd()
 # print('__________________________')
 
 
-# In[ ]:
+# In[3]:
 
 
 """Configure"""
@@ -68,11 +60,15 @@ try:
     with open("spectre_config.json") as config_file:
         config = json.load(config_file)
         use_queryfile = config['use_queryfile']
+        print("Use Query File Excel: "+str(use_queryfile))
         queryfile = config['queryfile']
         print("Query File Excel: "+str(queryfile))
         use_queryfilejson = config['use_queryfile_json']
+        print("Use Query File JSON: "+str(use_queryfilejson))
         queryfilejson = config['queryfile_json']
         print("Query File JSON: "+str(queryfilejson))
+        metadata_settings = config['metadata']
+        print(metadata_settings)
         cache_setting = config['cache']
         print("Use Cache: "+str(cache_setting))
         datasaver = config['datasaver']
@@ -94,38 +90,39 @@ except FileNotFoundError as e:
     exit()
 
 
-# In[ ]:
+# In[4]:
 
 
 """Definition Used to Generate a Query from Excel"""
-def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, rtmin, rtmax):
+def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, rtmin, rtmax, group="A"):
     query = "QUERY scaninfo(MS1DATA) FILTER MS1MZ="+     str(MS1_MZ)+":TOLERANCEPPM="+     str(MS1_MZ_tolerance_ppm)+     " AND RTMIN="+(str(rtmin))+     " AND RTMAX="+str(rtmax)
-    return {'name':name, 'KEGG': KEGG, 'query':query, 'rtmin': str(rtmin), 'rtmax': str(rtmax)}
+    return {'name':name, 'KEGG': KEGG, 'group':group, 'query':query}
 
 
-# In[ ]:
+# In[5]:
 
 
-"""Create Queries from Query File"""
+"""Create Queries from Query Files"""
 queries_excel = []
+query_groups = {}
 name_kegg_dict = {}
 MassQL_query_df = pd.DataFrame()
-if use_queryfile:
-    if queryfile:
-        try: 
-            MassQL_query_df = pd.read_excel(queryfile)
-            print("\nLoaded MassQL queries from: "+str(queryfile)+"\n")
-            for index, row in MassQL_query_df.iterrows():
-                if row['ion_mode'] == 1:
-                    MS1MZ = row['Monoisotopic'] + 1.00725
-                else:
-                    MS1MZ = row['Monoisotopic'] - 1.00725
-                queries_excel.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], row['RTMIN'], row['RTMAX']))
-                name_kegg_dict.update({row['Name']: row['KEGG']})
-        except FileNotFoundError as e:
-            print(f"FileNotFoundError\n"
-                  f"{e} \n"
-                  f"Not found in "+os.getcwd()+"\n")
+if use_queryfile and queryfile:
+    try: 
+        MassQL_query_df = pd.read_excel(queryfile)
+        print("\nLoaded MassQL queries from: "+str(queryfile)+"\n")
+        for index, row in MassQL_query_df.iterrows():
+            if row['ion_mode'] == 1:
+                MS1MZ = row['Monoisotopic'] + 1.00725
+            else:
+                MS1MZ = row['Monoisotopic'] - 1.00725
+            queries_excel.append(create_query(row['Name'], row['KEGG'], row['Group'],  MS1MZ, row['TOLERANCEPPM'], row['RTMIN'], row['RTMAX']))
+            name_kegg_dict.update({row['Name']: row['KEGG']})
+            query_groups.update({row['Name']: row['Group']})
+    except FileNotFoundError as e:
+        print(f"FileNotFoundError\n"
+              f"{e} \n"
+              f"Not found in "+os.getcwd()+"\n")
 
 queries_json = []
 if use_queryfilejson:
@@ -136,6 +133,8 @@ if use_queryfilejson:
                 print("\nLoaded MassQL queries from: "+str(queryfilejson)+"\n")
                 for entry in queryjson:
                     queries_json.append(entry)
+                    name_kegg_dict.update({entry['name']: entry['KEGG']})
+                    query_groups.update({entry['name']: entry['group']})
         except FileNotFoundError as e:
             print(f"FileNotFoundError\n"
                   f"{e} \n"
@@ -150,7 +149,7 @@ else:
     exit()
 
 
-# In[ ]:
+# In[6]:
 
 
 """Override MassQL definition to add datasaver function"""
@@ -295,7 +294,7 @@ def custom_load_data_mzML_pyteomics(input_filename, datasaver=datasaver):
     return ms1_df, ms2_df
 
 
-# In[ ]:
+# In[7]:
 
 
 """MassQL file loading"""
@@ -371,7 +370,7 @@ print('Current working directory is now data directory: '+os.getcwd())
 print("")
 
 
-# In[ ]:
+# In[8]:
 
 
 """Convert raw files"""
@@ -411,10 +410,29 @@ elif convert_count > 0:
     print(str(convert_count) + " file(s) converted")
 
 
-# In[ ]:
+# In[9]:
+
+
+"""metadata"""
+if metadata_settings["use_metadata"]:
+    met_file = glob.glob('*'+str(metadata_settings["metadata_filename"]))
+    if len(met_file) != 0:
+        metadata_df = pd.read_excel(met_file[0])
+        print("\nLoaded metadata from: "+str(met_file[0])+"\n")
+    else:
+        metadata_df = pd.DataFrame()
+        print("\nNo metadata file loaded\n")
+else:
+    metadata_df = pd.DataFrame()
+    print("\nNo metadata file loaded\n")
+
+
+# In[10]:
 
 
 """Query files"""
+import regex as re
+
 peak_area_df = pd.DataFrame()
 raw_df = pd.DataFrame()
 all_results_list = []
@@ -436,45 +454,78 @@ except FileNotFoundError as e:
     input("Press enter to exit...")
     exit()
 
-import scipy.signal
+filename_groups = {}
 
+# Function to extract RTMIN value from a given input string
+def extract_rtmin_value(input_string):
+    pattern = r'RTMIN=(\d+(?:\.\d+)?)'
+    match = re.search(pattern, input_string)
+    if match:
+        return match.group(1)
+    else:
+        return 0
+
+# Function to extract RTMAX value from a given input string
+def extract_rtmax_value(input_string):
+    pattern = r'RTMAX=(\d+(?:\.\d+)?)'
+    match = re.search(pattern, input_string)
+    if match:
+        return match.group(1)
+    else:
+        return 99999
+    
 counter = 0
-for filepath in sorted(glob.iglob('*.mzML')):
+for filename in sorted(glob.iglob('*.mzML')):
+   
+    filename_noext = os.path.splitext(filename)[0]
+    if not metadata_df.empty:
+        if not metadata_df.loc[metadata_df[metadata_settings["filename_column"]] == filename_noext].empty:
+            filename_group = metadata_df.loc[metadata_df[metadata_settings["filename_column"]] == filename_noext][metadata_settings["group_columns"]].values[0][0]
+            filename_groups.update({filename_noext:filename_group})
     counter += 1
     print('')
     print('----- Processing File '+str(counter)+' of '+str(file_count)+' -----')
-    filename = filepath
-    ms1_df, ms2_df = mq_load_data(filepath, cache=cache_setting)
+    ms1_df, ms2_df = mq_load_data(filename, cache=cache_setting)
     for i, query in enumerate(queries):
-        int_range = float(query['rtmax']) - float(query['rtmin'])
+        # int_range = float(query['rtmax']) - float(query['rtmin'])
         results_df = pd.DataFrame()
+        # print(query['query'])
+        # print(filename)
         try:
-            results_df = msql_engine.process_query(query['query'], filepath, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
-
+            # results_df = msql_engine.process_query(query['query'], filename, cache=cache_setting, ms1_df=ms1_df)
+            results_df = msql_engine.process_query(query['query'], filename, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
+            rtmin_val = extract_rtmin_value(query['query'])
+            rtmax_val = extract_rtmax_value(query['query'])
+            results_df = results_df.loc[(results_df['rt'] > float(rtmin_val)) & (results_df.rt<float(rtmax_val))].copy()
         except Exception:
+            results_df = pd.DataFrame()
             print('Query failure\n' + 'File: ' + str(filename) + '\nQuery: ' + str(query['query']))
-            print('Query will fail if running MS2 query on file without MS2 data')
+            # print('Query will fail if running MS2 query on file without MS2 data')
             pass 
+        # print(results_df)
         raw_massql_df = results_df.copy()
         raw_massql_df['filename'] = filename
         raw_massql_df['query'] = query['name']
+        # print(raw_massql_df)
         raw_df = pd.concat([raw_df, raw_massql_df], ignore_index=True)
         raw_massql_df = pd.DataFrame()
-        if not results_df.empty and 'rt' in results_df.columns and len(results_df) > 0:
+        if not results_df.empty and len(results_df) > 0:
             # results_df = results_df.loc[(results_df['rt'] > float(query['rtmin'])-(int_range/2)) & (results_df.rt<float(query['rtmax'])+(int_range/2))]
-            results_df_i = results_df.loc[(results_df['rt'] > float(query['rtmin'])) & (results_df.rt<float(query['rtmax']))].copy()
-            if len(results_df_i) > 0:
-                if len(results_df_i) > 1:
-                    peak_area = trapz(results_df_i.i, x=results_df_i.rt)
+            # results_df_i = results_df.loc[(results_df['rt'] > float(query['rtmin'])) & (results_df.rt<float(query['rtmax']))].copy()
+            if len(results_df) > 0:
+                if len(results_df) > 1:
+                    peak_area = trapz(results_df.i, x=results_df.rt)
+                    # print(peak_area)
+                    # print(sum(results_df.loc[:,"i"]))
                 else:
-                    peak_area = sum(results_df_i.loc[:,"i"])
+                    peak_area = sum(results_df.loc[:,"i"])
             else:
                 peak_area = 0
-            results_df_i = pd.DataFrame()
+            # results_df_i = pd.DataFrame()
             peak_area_df.at[filename, 'file_directory'] = os.getcwd()
             peak_area_df.at[filename, query['name']] = peak_area
             results_df.loc[:, "query_name"] = query['name']
-            results_df.loc[:, "file"] = os.getcwd()+"\\"+filepath
+            results_df.loc[:, "file"] = os.getcwd()+"\\"+filename
             results_df.loc[:, "file_directory"] = os.getcwd()
             results_df.loc[:, "filename"] = filename
             if datasaver:
@@ -494,25 +545,26 @@ if results_df.empty:
     input("Press enter to exit...")
     exit()
 
-# display(raw_df)
 
 
-# In[ ]:
+# In[11]:
 
 
 """Integrate and Plot Results"""
+
+
 for i, query in enumerate(queries):
-    int_range = float(query['rtmax']) - float(query['rtmin'])
+    # int_range = float(query['rtmax']) - float(query['rtmin'])
     fig1 = plt.figure(figsize=(12,8))
     plt.subplots_adjust(bottom=0.3, top=.9, wspace = .1)
     fig1.suptitle(query['name'], y = .96, fontsize=16)
     fig1_sub1 = fig1.add_subplot(121, title='Intensity vs RT', xlabel='retention time', ylabel='intensity')
     fig1_sub1.title.set_size(14)
-    fig1_sub1.axvline(x=float(query['rtmin']), color='b')
-    fig1_sub1.axvline(x=float(query['rtmax']), color='b')
-    fig1_sub1.axvline(x=float(query['rtmin']), color='r', linestyle='--')
-    fig1_sub1.axvline(x=float(query['rtmax']), color='r', linestyle='--')
-    fig1_sub1.set_xlim([float(query['rtmin'])-(int_range/2), float(query['rtmax'])+(int_range/2)])
+    # fig1_sub1.axvline(x=float(query['rtmin']), color='b')
+    # fig1_sub1.axvline(x=float(query['rtmax']), color='b')
+    # fig1_sub1.axvline(x=float(query['rtmin']), color='r', linestyle='--')
+    # fig1_sub1.axvline(x=float(query['rtmax']), color='r', linestyle='--')
+    # fig1_sub1.set_xlim([float(query['rtmin'])-(int_range/2), float(query['rtmax'])+(int_range/2)])
     fig1_sub1.set_ylabel('Intensity', fontsize=12)
     fig1_sub1.set_xlabel('Retention Time', fontsize=12)
     fig1_sub2 = fig1.add_subplot(122, title='peak area')
@@ -527,6 +579,7 @@ for i, query in enumerate(queries):
     plt.subplots_adjust(bottom=0.3, top=.9, wspace = .1, left = 0.075)
     for file_n in results_df['file'].unique():
         file_directory, filename = file_n.rsplit('\\', 1)
+        filename_noext = os.path.splitext(filename)[0]
         filtered_data = results_df.loc[(results_df['query_name']==query['name']) & (results_df['file']==file_n)].copy()
         peak_area = peak_area_df.loc[filename][query['name']]
         fig1_sub1.plot(filtered_data.rt, filtered_data.i)
@@ -560,25 +613,25 @@ peak_area_df_new = peak_area_df_new.rename(columns = {'index':'CORE_Filename'})
 
 raw_df.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_raw_query_df.csv")  
 
-with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results.xlsx") as writer:
-    peak_area_df_new.to_excel(writer, sheet_name="results", index=False)
-    if not MassQL_query_df.empty:
-        MassQL_query_df.to_excel(writer, sheet_name="queries", index=False)
-
+# with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results.xlsx") as writer:
+#     peak_area_df_new.to_excel(writer, sheet_name="results", index=False)
+#     if not MassQL_query_df.empty:
+#         MassQL_query_df.to_excel(writer, sheet_name="queries", index=False)
     
-    
-peak_area_df_biopan = peak_area_df_new.drop(columns=['file_directory'])
+peak_area_df_transpose = peak_area_df_new.drop(columns=['file_directory'])
 
 def remove_filename_ext(filenameext):
-    filenameext = str(filenameext)  # cast to string
-    filenamenoext = filenameext[:-5] # remove last five characters
+    # filenameext = str(filenameext)  # cast to string
+    # filenamenoext = filenameext[:-5] # remove last five characters
+    filenamenoext = os.path.splitext(str(filenameext))[0]
     return str(filenamenoext)
 
-peak_area_df_biopan['CORE_Filename'] =peak_area_df_biopan['CORE_Filename'].apply(remove_filename_ext)
+peak_area_df_transpose['CORE_Filename'] =peak_area_df_transpose['CORE_Filename'].apply(remove_filename_ext)
+# peak_area_df_transpose['CORE_Filename'] = os.path.splitext(peak_area_df_transpose['CORE_Filename'])[0]
 
-peak_area_df_biopan.set_index('CORE_Filename',inplace=True)
-peak_area_df_biopan = peak_area_df_biopan.T
-peak_area_df_biopan.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results_biopan.csv")  
+peak_area_df_transpose.set_index('CORE_Filename',inplace=True)
+peak_area_df_transpose = peak_area_df_transpose.T
+peak_area_df_transpose.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results.csv")  
 
 print("\nResults saved to:")
 print(os.getcwd()+"\\SpectraSpectre_Output\n")
@@ -586,8 +639,122 @@ print(os.getcwd()+"\\SpectraSpectre_Output\n")
 # input("Press enter to exit...")
 
 
-# In[ ]:
+# In[12]:
 
+
+filename_groups_dict = {}
+for key, value in filename_groups.items():
+   if value in filename_groups_dict:
+       filename_groups_dict[value].append(key)
+   else:
+       filename_groups_dict[value]=[key]
+
+query_groups_dict = {}
+for key, value in query_groups.items():
+   if value in query_groups_dict:
+       query_groups_dict[value].append(key)
+   else:
+       query_groups_dict[value]=[key]
+
+
+# In[13]:
+
+
+analysis_df = peak_area_df_transpose.copy()
+analysis_df_T = peak_area_df_transpose.copy().T
+
+analysis_df_filename_grouped = pd.DataFrame()
+analysis_df_query_grouped = pd.DataFrame()
+analysis_df_both_grouped = pd.DataFrame()
+
+
+for fname_group, fnames in filename_groups_dict.items():
+    analysis_df_filename_grouped[fname_group] = analysis_df[fnames].sum(axis=1)
+
+for qname_group, qnames in query_groups_dict.items():
+    analysis_df_query_grouped[qname_group] = analysis_df_T[qnames].sum(axis=1)
+analysis_df_query_grouped_T = analysis_df_query_grouped.T
+analysis_df_query_grouped_T.columns.name = None
+
+for fname_group, fnames in filename_groups_dict.items():
+    analysis_df_both_grouped[fname_group] = analysis_df_query_grouped_T[fnames].sum(axis=1)
+
+
+analysis_df_filename_grouped_log2 = np.log2(1+analysis_df_filename_grouped)
+analysis_df_query_grouped_T_log2 = np.log2(1+analysis_df_query_grouped_T)
+analysis_df_both_grouped_log2 = np.log2(1+analysis_df_both_grouped)
+
+# display(analysis_df_filename_grouped)
+# display(1+analysis_df_filename_grouped)
+
+from  itertools import combinations
+
+analysis_df_filename_grouped_ratio = {f'{a}/{b}': analysis_df_filename_grouped[a].div(analysis_df_filename_grouped[b]) for a, b in combinations(analysis_df_filename_grouped.columns, 2)}
+if analysis_df_filename_grouped_ratio:
+    analysis_df_filename_grouped_ratio = pd.concat(analysis_df_filename_grouped_ratio, axis=1)
+    analysis_df_filename_grouped_ratio = analysis_df_filename_grouped_ratio.fillna("Null")
+else:
+    analysis_df_filename_grouped_ratio = pd.DataFrame()
+
+analysis_df_query_grouped = analysis_df_query_grouped_T.T
+analysis_df_query_grouped_ratio = {f'{a}/{b}': analysis_df_query_grouped[a].div(analysis_df_query_grouped[b]) for a, b in combinations(analysis_df_query_grouped.columns, 2)}
+analysis_df_query_grouped_ratio = pd.concat(analysis_df_query_grouped_ratio, axis=1)
+analysis_df_query_grouped_T_ratio = analysis_df_query_grouped_ratio.T
+analysis_df_query_grouped_T_ratio = analysis_df_query_grouped_T_ratio.fillna("Null")
+
+analysis_df_both_grouped_ratio = {f'{a}/{b}': analysis_df_both_grouped[a].div(analysis_df_both_grouped[b]) for a, b in combinations(analysis_df_both_grouped.columns, 2)}
+if analysis_df_both_grouped_ratio:
+    analysis_df_both_grouped_ratio = pd.concat(analysis_df_both_grouped_ratio, axis=1)
+    analysis_df_both_grouped_ratio = analysis_df_both_grouped_ratio.fillna("Null")
+else:
+    analysis_df_both_grouped_ratio = pd.DataFrame()
+
+with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_analysis.xlsx") as writer:
+    analysis_df_filename_grouped.to_excel(writer, sheet_name="filename_grouped", index=True)
+    analysis_df_query_grouped_T.to_excel(writer, sheet_name="query_grouped", index=True)
+    analysis_df_both_grouped.to_excel(writer, sheet_name="both_grouped", index=True)
+    analysis_df_filename_grouped_ratio.to_excel(writer, sheet_name="filename_grouped_ratio", index=True)
+    analysis_df_query_grouped_T_ratio.to_excel(writer, sheet_name="query_grouped_ratio", index=True)
+    analysis_df_both_grouped_ratio.to_excel(writer, sheet_name="both_grouped_ratio", index=True)
+
+    
+analysis_df_filename_grouped_log2_ratio = {f'{a}_{b}': analysis_df_filename_grouped_log2[a].sub(analysis_df_filename_grouped_log2[b]) for a, b in combinations(analysis_df_filename_grouped_log2.columns, 2)}
+if analysis_df_filename_grouped_log2_ratio:
+    analysis_df_filename_grouped_log2_ratio = pd.concat(analysis_df_filename_grouped_log2_ratio, axis=1)
+    analysis_df_filename_grouped_log2_ratio = analysis_df_filename_grouped_log2_ratio.fillna("Null")
+else:
+    analysis_df_filename_grouped_log2_ratio = pd.DataFrame()
+
+analysis_df_query_grouped_log2 = analysis_df_query_grouped_T_log2.T
+analysis_df_query_grouped_log2_ratio = {f'{a}_{b}': analysis_df_query_grouped_log2[a].sub(analysis_df_query_grouped_log2[b]) for a, b in combinations(analysis_df_query_grouped_log2.columns, 2)}
+analysis_df_query_grouped_log2_ratio = pd.concat(analysis_df_query_grouped_log2_ratio, axis=1)
+analysis_df_query_grouped_T_log2_ratio = analysis_df_query_grouped_log2_ratio.T
+analysis_df_query_grouped_T_log2_ratio = analysis_df_query_grouped_T_log2_ratio.fillna("Null")
+
+analysis_df_both_grouped_log2_ratio = {f'{a}_{b}': analysis_df_both_grouped_log2[a].sub(analysis_df_both_grouped_log2[b]) for a, b in combinations(analysis_df_both_grouped_log2.columns, 2)}
+if analysis_df_both_grouped_log2_ratio:
+    analysis_df_both_grouped_log2_ratio = pd.concat(analysis_df_both_grouped_log2_ratio, axis=1)
+    analysis_df_both_grouped_log2_ratio = analysis_df_both_grouped_log2_ratio.fillna("Null")
+else:
+    analysis_df_both_grouped_log2_ratio = pd.DataFrame()
+
+# analysis_df_filename_grouped_log2 = np.log2(analysis_df_filename_grouped)
+# analysis_df_query_grouped_T_log2 = np.log2(analysis_df_query_grouped_T)
+# analysis_df_both_grouped_log2 = np.log2(analysis_df_both_grouped)
+
+with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_analysis_log2.xlsx") as writer:
+    analysis_df_filename_grouped_log2.to_excel(writer, sheet_name="filename_grouped", index=True)
+    analysis_df_query_grouped_T_log2.to_excel(writer, sheet_name="query_grouped", index=True)
+    analysis_df_both_grouped_log2.to_excel(writer, sheet_name="both_grouped", index=True)
+    analysis_df_filename_grouped_log2_ratio.to_excel(writer, sheet_name="filename_grouped_ratio", index=True)
+    analysis_df_query_grouped_T_log2_ratio.to_excel(writer, sheet_name="query_grouped_ratio", index=True)
+    analysis_df_both_grouped_log2_ratio.to_excel(writer, sheet_name="both_grouped_ratio", index=True)
+
+
+# In[14]:
+
+
+"""System Suitability"""
 
 QC_df = peak_area_df_new[peak_area_df_new['CORE_Filename'].str.startswith(tuple(QC_files)) | peak_area_df_new['CORE_Filename'].str.startswith('QC_')]
 # QC_df = peak_area_df_new[peak_area_df_new['CORE_Filename'].str.startswith('QC_')]
@@ -650,14 +817,17 @@ else:
     print('\n')
 
 
+# In[20]:
 
-# In[ ]:
 
-
-if kegg_path:
+if kegg_path and not analysis_df_filename_grouped_log2_ratio.empty:
+    print("\nCreating KEGG Maps\n")
     # os.chdir(starting_directory)
+          
     import Bio
     Bio.__version__
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
 
     from Bio import SeqIO
     from Bio.KEGG.REST import *
@@ -682,21 +852,27 @@ if kegg_path:
         rgb = tuple([int(val) for val in rgb])
         return '#' + ''.join([hex(val)[2:] for val in rgb]).upper()
 
-    peak_area_df_transform = peak_area_df_new.copy()
-    def transform_func(number):
-        return np.log2(1+number)
+    
+    # peak_area_df_transform = peak_area_df_new.copy()
+    
+    peak_area_df_transform = analysis_df_filename_grouped_log2_ratio.T.copy()
+    # def transform_func(number):
+    #     return np.log2(1+number)
 
     # executing the function
     bad_column = ["CORE_Filename", "file_directory"]
     other_cols = peak_area_df_transform.columns.difference(bad_column)
-    peak_area_df_transform[other_cols] = peak_area_df_transform[other_cols].apply(transform_func)
-    peak_area_df_transform[other_cols]= peak_area_df_transform[other_cols].div(peak_area_df_transform[other_cols].iloc[0])
+    # peak_area_df_transform[other_cols] = peak_area_df_transform[other_cols].apply(transform_func)
+    # display(peak_area_df_transform)
+    # peak_area_df_transform[other_cols]= peak_area_df_transform[other_cols].div(peak_area_df_transform[other_cols].iloc[0])
+    # display(peak_area_df_transform)
 
     # displaying the DataFrame
     # display(peak_area_df_transform)
+    
 
-    shade_dict = {}
     for index, row in peak_area_df_transform[other_cols].iterrows():
+        shade_dict = {}
         if index == 0:
             pass
         else:
@@ -705,74 +881,81 @@ if kegg_path:
                 if col_name in name_kegg_dict.keys():
                     cid = str(name_kegg_dict[col_name])
                     cid = cid.replace(u'\xa0', u'')
-                    if row[col_name] > 1.1:
-                        mer = rgb_to_hex([255,255*(1/row[col_name]),255*(1/row[col_name])])
-                    elif row[col_name] <= 1.1 and row[col_name] >= 0.9:
+                    
+                    if row[col_name] > 0:
+                        if row[col_name] >= 1:
+                            mer = '#%02x%02x%02x' % (0, 0, 255)
+                        else:
+                            color_val = int(255*(1-row[col_name]))
+                            mer = '#%02x%02x%02x' % (color_val, color_val, 255)
+                    elif row[col_name] < 0:
+                        if row[col_name] <= -1:
+                            mer = '#%02x%02x%02x' % (255, 0, 0)
+                        else:
+                            color_val = int(255*(1+row[col_name]))
+                            mer = '#%02x%02x%02x' % (255, color_val, color_val)
+                    elif row[col_name] == 0:
                         mer = rgb_to_hex([255,255,255])
-                    elif row[col_name] > 0 and row[col_name] < 0.9:
-                        mer = rgb_to_hex([255*(row[col_name]),255*(row[col_name]),255])
                     else:
-                        mer = rgb_to_hex([150,150,150])
+                        mer = rgb_to_hex([155,155,155])
+
                     shade_dict.update({str(cid):mer})
 
                     # from reportlab.lib.colors import HexColor
-    # pathway = KGML_parser.read(kegg_get("hsa00020", "kgml"))
-    try:
-        pathway = KGML_parser.read(kegg_get(kegg_path, "kgml"))
+        try:
+            kegg_path = "hsa00020"
+            pathway = KGML_parser.read(kegg_get(kegg_path, "kgml"))
+            for x in pathway.compounds:
+                # print(str(shade_dict[x.graphics[0].name]))
+                # print(shade_dict)
+                try:
+                    x.graphics[0].bgcolor = str(shade_dict[x.graphics[0].name]) + str('CC')
+                    # x.graphics[0].bgcolor = str(shade_dict[x.graphics[0].name])
 
-        print(pathway)
-
-        for x in pathway.compounds:
-            # print(str(shade_dict[x.graphics[0].name]))
+                    # x.graphics[0].fgcolor = str(shade_dict[x.graphics[0].name])
+                    if shade_dict[x.graphics[0].name] == '#FFFFFF' or shade_dict[x.graphics[0].name] == "#969696":   
+                        x.graphics[0].fgcolor = "#000000" + str('66')
+                    else:
+                        x.graphics[0].fgcolor = str(shade_dict[x.graphics[0].name]) + str('CC')
+                except Exception:
+                    pass
+                    # print('no match')
+                x.graphics[0].type="circle"
+                # x.graphics[0].fgcolor = "#d1d1d1"
+                x.graphics[0].width = 30
+                x.graphics[0].height = 17
+    
+            for x in pathway.orthologs:
+                x.graphics[0].fgcolor = "#b3b3b3"
+                x.graphics[0].bgcolor = "#ffffff"
+                # x.graphics[0].width = 40
+                # x.graphics[0].height = 40
+    
+            for x in pathway.genes:
+                x.graphics[0].fgcolor = "#b3b3b3"
+                x.graphics[0].bgcolor = "#ffffff"
+                # x.graphics[0].width = 40
+                # x.graphics[0].height = 40
+    
+            canvas = KGMLCanvas(pathway, import_imagemap=True)
+            kegg_pdf_path = "SpectraSpectre_Output/"+timestr+"/"+timestr+"_kegg_map_"+kegg_path+"_"+str(index)+".pdf"
             # print(shade_dict)
-            try:
-                x.graphics[0].bgcolor = str(shade_dict[x.graphics[0].name]) + str('CC')
-                # x.graphics[0].fgcolor = str(shade_dict[x.graphics[0].name])
-                if shade_dict[x.graphics[0].name] == '#FFFFFF' or shade_dict[x.graphics[0].name] == "#969696":   
-                    x.graphics[0].fgcolor = "#000000" + str('66')
-                else:
-                    x.graphics[0].fgcolor = str(shade_dict[x.graphics[0].name]) + str('CC')
-            except Exception:
-                pass
-                # print('no match')
-            x.graphics[0].type="circle"
-            # x.graphics[0].fgcolor = "#d1d1d1"
-            x.graphics[0].width = 30
-            x.graphics[0].height = 17
 
-        for x in pathway.orthologs:
-            x.graphics[0].fgcolor = "#b3b3b3"
-            x.graphics[0].bgcolor = "#ffffff"
-            # x.graphics[0].width = 40
-            # x.graphics[0].height = 40
+            canvas.draw(kegg_pdf_path)
+            print(index + " created")
 
-        for x in pathway.genes:
-            x.graphics[0].fgcolor = "#b3b3b3"
-            x.graphics[0].bgcolor = "#ffffff"
-            # x.graphics[0].width = 40
-            # x.graphics[0].height = 40
-
-        for x in pathway.genes:
-            x.graphics[0].fgcolor = "#b3b3b3"
-            x.graphics[0].bgcolor = "#ffffff"
-            # x.graphics[0].width = 40
-            # x.graphics[0].height = 40
-
-        canvas = KGMLCanvas(pathway, import_imagemap=True)
-        kegg_pdf_path = "SpectraSpectre_Output/"+timestr+"/"+timestr+"_kegg_map_"+kegg_path+".pdf"
-        canvas.draw(kegg_pdf_path)
-        # PDF("fab_map_with_image.pdf")
-
-        # Store Pdf with convert_from_path function
-        poppler = False
-        if poppler:
-            images = convert_from_path(kegg_pdf_path, poppler_path = r"C:\ProgramFilesFolder\poppler-23.07.0\Library\bin")
-            for i in range(len(images)):
-                images[i].save('page'+ str(i) +'.jpg', 'JPEG')
-            Image("SpectraSpectre_Output/"+timestr+"/"+timestr+"_kegg_map_"+kegg_path+".jpg")
-        print("Created KEGG map")
-    except Exception:
-        print("Problem Creating KEGG map \n\n Try disabling VPN if active \n")
+        #     # PDF("fab_map_with_image.pdf")
+    
+        #     # Store Pdf with convert_from_path function
+        #     poppler = False
+        #     # if poppler:
+        #     #     images = convert_from_path(kegg_pdf_path, poppler_path = r"C:\ProgramFilesFolder\poppler-23.07.0\Library\bin")
+        #     #     for i in range(len(images)):
+        #     #         images[i].save('page'+ str(i) +'.jpg', 'JPEG')
+        #     #     Image("SpectraSpectre_Output/"+timestr+"/"+timestr+"_kegg_map_"+kegg_path+".jpg")
+        #     # print("Created KEGG map")
+        except Exception:
+            print("Problem Creating KEGG map \n\n Try Enabling VPN if NOT active \n")
 
 
 # In[ ]:
@@ -780,4 +963,10 @@ if kegg_path:
 
 print('Complete\n')
 input("Press enter to exit...")
+
+
+# In[ ]:
+
+
+
 

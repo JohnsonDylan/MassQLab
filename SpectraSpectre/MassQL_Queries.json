@@ -1,26 +1,42 @@
 [
 	{
-	"name": "PC_test", 
-	"KEGG": "not applicable", 
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=184.0733:TOLERANCEPPM=10 AND RTMIN=10.0 AND RTMAX=17.0",
-	"rtmin": "10.0",
-	"rtmax": "17.0"
+	"name": "NISTSRM1950_251", 
+	"KEGG": "C00022", 
+	"group": "A",
+	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=251.09579:TOLERANCEPPM=1000 AND RTMIN=12 AND RTMAX=14"
 	},
 	{
-	"name": "PE_test", 
-	"KEGG": "not applicable", 
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2NL=141.0191:TOLERANCEPPM=10 AND RTMIN=10.0 AND RTMAX=17.0",
-	"rtmin": "10.0",
-	"rtmax": "17.0"
+	"name": "NISTSRM1950_158", 
+	"KEGG": "C00024", 
+	"group": "A",
+	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=158.93919:TOLERANCEPPM=10 AND RTMIN=12 AND RTMAX=14"
 	},
 	{
-	"name": "PS_test", 
-	"KEGG": "not applicable", 
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2NL=185.0089:TOLERANCEPPM=10 AND RTMIN=10.0 AND RTMAX=17.0",
-	"rtmin": "10.0",
-	"rtmax": "17.0"
+	"name": "NISTSRM1950_251_or_158", 
+	"KEGG": "C00026", 
+	"group": "A",
+	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=(251.09579 OR 158.93919):TOLERANCEPPM=12 AND RTMIN=12.0 AND RTMAX=14.0"
+	},
+	{
+	"name": "NISTSRM1950_473", 
+	"KEGG": "C00122", 
+	"group": "B",
+	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=473.28253:TOLERANCEPPM=1000 AND RTMIN=7.5 AND RTMAX=8.5"
+	},
+	{
+	"name": "NISTSRM1950_277", 
+	"KEGG": "C00042", 
+	"group": "B",
+	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=277.14428:TOLERANCEPPM=10 AND RTMIN=7.5 AND RTMAX=8.5"
+	},
+	{
+	"name": "NISTSRM1950_473_or_277", 
+	"KEGG": "C00091", 
+	"group": "B",
+	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=(473.28253 OR 277.14428):TOLERANCEPPM=12 AND RTMIN=7.5 AND RTMAX=8.5"
 	}
-
 ]
+
+ 
 
 

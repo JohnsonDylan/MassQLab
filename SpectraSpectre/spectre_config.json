@@ -1,13 +1,18 @@
 {
 	"data_directory": "data/",
-	"use_queryfile": true,
+	"use_queryfile": false,
 	"queryfile" : "MassQL_Queries.xlsx",
 	"use_queryfile_json": true,
 	"queryfile_json" : "MassQL_Queries.json",
-	"convert_raw": false,
+	"metadata" : {
+		"use_metadata": false,
+		"metadata_filename": "Metadata.xlsx",
+		"filename_column": "CORE_Filename",
+		"group_columns": ["USER_Column1"]},
+	"convert_raw": true,
 	"msconvert_exe": "C:/Users/johnsondyj/AppData/Local/Apps/ProteoWizard 3.0.23118.b2ed96f 64-bit/msconvert.exe",
 	"QC_files" : ["QC_2022MCF0031_p_QCcurve_02_01"],
-	"kegg_path": false,
+	"kegg_path": "hsa00020",
 	"cache": true,
 	"datasaver": false
 }
