@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 print('__________________________')
@@ -31,7 +31,7 @@ starting_directory = os.getcwd()
 # jupyter nbconvert --to script "<absolute_path_to_notebook>.ipynb"
 
 
-# In[2]:
+# In[ ]:
 
 
 """Do not run in Jupyter"""
@@ -52,7 +52,7 @@ starting_directory = os.getcwd()
 # print('__________________________')
 
 
-# In[3]:
+# In[ ]:
 
 
 """Configure"""
@@ -90,16 +90,16 @@ except FileNotFoundError as e:
     exit()
 
 
-# In[4]:
+# In[ ]:
 
 
 """Definition Used to Generate a Query from Excel"""
 def create_query(name, KEGG, MS1_MZ, MS1_MZ_tolerance_ppm, rtmin, rtmax, group="A"):
     query = "QUERY scaninfo(MS1DATA) FILTER MS1MZ="+     str(MS1_MZ)+":TOLERANCEPPM="+     str(MS1_MZ_tolerance_ppm)+     " AND RTMIN="+(str(rtmin))+     " AND RTMAX="+str(rtmax)
-    return {'name':name, 'KEGG': KEGG, 'group':group, 'query':query}
+    return {'name':name, 'KEGG': KEGG, 'group':group, 'query':query, 'mslevel':1}
 
 
-# In[5]:
+# In[ ]:
 
 
 """Create Queries from Query Files"""
@@ -116,7 +116,7 @@ if use_queryfile and queryfile:
                 MS1MZ = row['Monoisotopic'] + 1.00725
             else:
                 MS1MZ = row['Monoisotopic'] - 1.00725
-            queries_excel.append(create_query(row['Name'], row['KEGG'], row['Group'],  MS1MZ, row['TOLERANCEPPM'], row['RTMIN'], row['RTMAX']))
+            queries_excel.append(create_query(row['Name'], row['KEGG'], MS1MZ, row['TOLERANCEPPM'], row['RTMIN'], row['RTMAX'], row['Group']))
             name_kegg_dict.update({row['Name']: row['KEGG']})
             query_groups.update({row['Name']: row['Group']})
     except FileNotFoundError as e:
@@ -132,6 +132,11 @@ if use_queryfilejson:
                 queryjson = json.load(queryfilej)
                 print("\nLoaded MassQL queries from: "+str(queryfilejson)+"\n")
                 for entry in queryjson:
+                    if "scaninfo(MS2DATA)" in entry['query']:
+                        mslevel = 2
+                    else:
+                        mslevel = 1
+                    entry.update({"mslevel": mslevel})
                     queries_json.append(entry)
                     name_kegg_dict.update({entry['name']: entry['KEGG']})
                     query_groups.update({entry['name']: entry['group']})
@@ -141,6 +146,8 @@ if use_queryfilejson:
                   f"Not found in "+os.getcwd()+"\n")
         
 queries = queries_excel + queries_json
+# display(queries)
+
 if queries:
     print("\nCreated " + str(len(queries)) + " MassQL Queries")
 else:
@@ -149,7 +156,7 @@ else:
     exit()
 
 
-# In[6]:
+# In[ ]:
 
 
 """Override MassQL definition to add datasaver function"""
@@ -294,7 +301,7 @@ def custom_load_data_mzML_pyteomics(input_filename, datasaver=datasaver):
     return ms1_df, ms2_df
 
 
-# In[7]:
+# In[ ]:
 
 
 """MassQL file loading"""
@@ -370,7 +377,7 @@ print('Current working directory is now data directory: '+os.getcwd())
 print("")
 
 
-# In[8]:
+# In[ ]:
 
 
 """Convert raw files"""
@@ -410,7 +417,7 @@ elif convert_count > 0:
     print(str(convert_count) + " file(s) converted")
 
 
-# In[9]:
+# In[ ]:
 
 
 """metadata"""
@@ -427,23 +434,21 @@ else:
     print("\nNo metadata file loaded\n")
 
 
-# In[10]:
+# In[ ]:
 
 
 """Query files"""
 import regex as re
-
+timestr = time.strftime("%Y_%m_%d_%H%M")
 peak_area_df = pd.DataFrame()
+measured_rt_df = pd.DataFrame()
 raw_df = pd.DataFrame()
 all_results_list = []
 try:
-    # file_count = len(fnmatch.filter(os.listdir("DataMZML\\"), '*.mzml'))
     file_count = len(fnmatch.filter(os.listdir(), '*.mzml'))
-
     if file_count == 0:
         # print('No mzml files found in '+os.getcwd()+"\\DataMZML\\\n")
         print('No mzml files found in '+os.getcwd()+"\\\n")
-
         input("Press enter to exit...")
         exit()
 
@@ -473,9 +478,23 @@ def extract_rtmax_value(input_string):
         return match.group(1)
     else:
         return 99999
+
+def lookup_scan(row):
+    try:
+        collision_type = list(mzml_reader[row['scan']-1]['precursorList']['precursor'][0]['activation'].keys())[0];
+        energy = str(float(list(mzml_reader[row['scan']-1]['precursorList']['precursor'][0]['activation'].values())[1]));
+        collision_type_energy = str(collision_type) + "__"+ str(energy);
+        # collision_type_energy_list.append(collision_type_energy);
+    except:
+        collision_type = None
+        energy = None
+        collision_type_energy = None
+    return collision_type, energy, collision_type_energy
     
 counter = 0
-for filename in sorted(glob.iglob('*.mzML')):
+filename_list = sorted(glob.iglob('*.mzML'))
+# filename_list = ['SysTest_v7_01_new.mzML']
+for filename in filename_list:
    
     filename_noext = os.path.splitext(filename)[0]
     if not metadata_df.empty:
@@ -487,13 +506,12 @@ for filename in sorted(glob.iglob('*.mzML')):
     print('----- Processing File '+str(counter)+' of '+str(file_count)+' -----')
     ms1_df, ms2_df = mq_load_data(filename, cache=cache_setting)
     for i, query in enumerate(queries):
-        # int_range = float(query['rtmax']) - float(query['rtmin'])
+        
+        scannum_query = query['query'].replace("scaninfo", "scannum")
         results_df = pd.DataFrame()
-        # print(query['query'])
-        # print(filename)
         try:
-            # results_df = msql_engine.process_query(query['query'], filename, cache=cache_setting, ms1_df=ms1_df)
             results_df = msql_engine.process_query(query['query'], filename, cache=cache_setting, ms1_df=ms1_df, ms2_df=ms2_df)
+            mzml_reader = mzml.MzML(filename)
             rtmin_val = extract_rtmin_value(query['query'])
             rtmax_val = extract_rtmax_value(query['query'])
             results_df = results_df.loc[(results_df['rt'] > float(rtmin_val)) & (results_df.rt<float(rtmax_val))].copy()
@@ -502,73 +520,177 @@ for filename in sorted(glob.iglob('*.mzML')):
             print('Query failure\n' + 'File: ' + str(filename) + '\nQuery: ' + str(query['query']))
             # print('Query will fail if running MS2 query on file without MS2 data')
             pass 
-        # print(results_df)
-        raw_massql_df = results_df.copy()
-        raw_massql_df['filename'] = filename
-        raw_massql_df['query'] = query['name']
-        # print(raw_massql_df)
-        raw_df = pd.concat([raw_df, raw_massql_df], ignore_index=True)
-        raw_massql_df = pd.DataFrame()
-        if not results_df.empty and len(results_df) > 0:
-            # results_df = results_df.loc[(results_df['rt'] > float(query['rtmin'])-(int_range/2)) & (results_df.rt<float(query['rtmax'])+(int_range/2))]
-            # results_df_i = results_df.loc[(results_df['rt'] > float(query['rtmin'])) & (results_df.rt<float(query['rtmax']))].copy()
-            if len(results_df) > 0:
-                if len(results_df) > 1:
-                    peak_area = trapz(results_df.i, x=results_df.rt)
-                    # print(peak_area)
-                    # print(sum(results_df.loc[:,"i"]))
-                else:
-                    peak_area = sum(results_df.loc[:,"i"])
-            else:
-                peak_area = 0
-            # results_df_i = pd.DataFrame()
-            peak_area_df.at[filename, 'file_directory'] = os.getcwd()
-            peak_area_df.at[filename, query['name']] = peak_area
-            results_df.loc[:, "query_name"] = query['name']
-            results_df.loc[:, "file"] = os.getcwd()+"\\"+filename
-            results_df.loc[:, "file_directory"] = os.getcwd()
-            results_df.loc[:, "filename"] = filename
-            if datasaver:
-                for cat_col in ['mslevel', 'query_name', 'file', 'file_directory', 'filename']:
-                    results_df = results_df[results_df[cat_col].notnull()].copy()
-                    # results_df.loc[:, cat_col] = results_df[cat_col].astype('category')
-            all_results_list.append(results_df)
+
+        results_df['filename'] = filename
+        results_df['query_name'] = query['name']
+        results_df['query'] = query['query']
+
+        if query['mslevel'] == 2:
+            if not results_df.empty:
+                results_df["collision_type"], results_df["energy"], results_df["collision_type_energy"] = zip(*results_df.apply(lambda row: lookup_scan(row), axis=1))
+
+        raw_df = pd.concat([raw_df, results_df], ignore_index=True)
+        
+        if query['mslevel'] == 2:
+            unique_name = filename + "_ms2"
+            group_name = "ms2"
+            if not results_df.empty:
+                for group_name, grouped_df in results_df.groupby('collision_type_energy'):
+                    unique_name = filename + "_" + group_name
+                    
+                    if not grouped_df.empty and len(grouped_df) > 0:
+    
+                        grouped_df = grouped_df.loc[grouped_df['i'].idxmax()].to_frame().T
+                        
+                        # peak_area = trapz(grouped_df.i, x=grouped_df.rt)
+                        peak_area = grouped_df.iloc[0]["i"]
+                        grouped_df['i'] = pd.to_numeric(grouped_df['i'])
+                        measured_RT = grouped_df.loc[grouped_df['i'].idxmax()]['rt']
+                        
+                        peak_area_df.at[unique_name, 'filename'] = filename
+                        peak_area_df.at[unique_name, 'file_directory'] = os.getcwd()
+                        peak_area_df.at[unique_name, query['name']] = peak_area
+                        peak_area_df.at[unique_name, 'collision_type_energy'] = group_name
+    
+                        measured_rt_df.at[unique_name, 'filename'] = filename
+                        measured_rt_df.at[unique_name, 'file_directory'] = os.getcwd()
+                        measured_rt_df.at[unique_name, query['name']] = measured_RT
+                        measured_rt_df.at[unique_name, 'collision_type_energy'] = group_name
+                        
+                        grouped_df.loc[:, "query_name"] = query['name']
+                        grouped_df.loc[:, "group_name"] = group_name
+                        grouped_df.loc[:, "file"] = os.getcwd()+"\\"+filename
+                        grouped_df.loc[:, "file_directory"] = os.getcwd()
+                        grouped_df.loc[:, "filename"] = filename
+                        grouped_df.loc[:, "unique_name"] = unique_name
+        
+                        all_results_list.append(grouped_df)
+                
+                    else:
+                        peak_area_df.at[unique_name, 'filename'] = filename
+                        peak_area_df.at[unique_name, 'file_directory'] = os.getcwd()
+                        peak_area_df.at[unique_name, query['name']] = 0
+                        peak_area_df.at[unique_name, 'collision_type_energy'] = group_name
+        
+                        measured_rt_df.at[unique_name, 'filename'] = filename
+                        measured_rt_df.at[unique_name, 'file_directory'] = os.getcwd()
+                        measured_rt_df.at[unique_name, query['name']] = 0
+                        measured_rt_df.at[unique_name, 'collision_type_energy'] = group_name
+                    
         else:
-            peak_area_df.at[filename, 'file_directory'] = os.getcwd()
-            peak_area_df.at[filename, query['name']] = 0
+            unique_name = filename + "_ms1"
+            group_name = "ms1"
+            if not results_df.empty and len(results_df) >= 3:
+                peak_area = trapz(results_df.i, x=results_df.rt)
+                measured_RT = results_df.loc[results_df['i'].astype(float).idxmax()]['rt']
+
+                peak_area_df.at[unique_name, 'filename'] = filename
+                peak_area_df.at[unique_name, 'file_directory'] = os.getcwd()
+                peak_area_df.at[unique_name, query['name']] = peak_area
+                peak_area_df.at[unique_name, 'collision_type_energy'] = group_name
+                
+                measured_rt_df.at[unique_name, 'filename'] = filename
+                measured_rt_df.at[unique_name, 'file_directory'] = os.getcwd()
+                measured_rt_df.at[unique_name, query['name']] = measured_RT
+                measured_rt_df.at[unique_name, 'collision_type_energy'] = group_name
+                
+                results_df.loc[:, "query_name"] = query['name']
+                results_df.loc[:, "group_name"] = group_name
+                results_df.loc[:, "file"] = os.getcwd()+"\\"+filename
+                results_df.loc[:, "file_directory"] = os.getcwd()
+                results_df.loc[:, "filename"] = filename
+                results_df.loc[:, "unique_name"] = unique_name
+                results_df.at[:, 'collision_type_energy'] = group_name
+
+                all_results_list.append(results_df)
+
+            else:
+                peak_area_df.at[unique_name, 'filename'] = filename
+                peak_area_df.at[unique_name, 'file_directory'] = os.getcwd()
+                peak_area_df.at[unique_name, query['name']] = 0
+                peak_area_df.at[unique_name, 'collision_type_energy'] = "ms1"
+
+                measured_rt_df.at[unique_name, 'filename'] = filename
+                measured_rt_df.at[unique_name, 'file_directory'] = os.getcwd()
+                measured_rt_df.at[unique_name, query['name']] = 0
+                measured_rt_df.at[unique_name, 'collision_type_energy'] = "ms1"
+                
+
 if all_results_list:        
-    results_df = pd.concat(all_results_list)
+    all_results_df = pd.concat(all_results_list)
+else:
+    all_results_df = pd.DataFrame()
 # print(results_df.memory_usage(index=True, deep=True).sum()/1000000000)
 
-if results_df.empty:
+if all_results_df.empty:
     print('\nNo matches for any query in any datafile\n')
     input("Press enter to exit...")
     exit()
 
 
-
-# In[11]:
-
-
-"""Integrate and Plot Results"""
+# In[ ]:
 
 
-for i, query in enumerate(queries):
-    # int_range = float(query['rtmax']) - float(query['rtmin'])
+#TODO create pdf of scans
+
+from pyteomics import pylab_aux as pa
+
+"""Save Results to Files"""
+
+def save_image(filename):
+    p = PdfPages(filename)
+    fig_nums = plt.get_fignums()
+    figs = [plt.figure(n) for n in fig_nums]
+    for fig in figs: 
+        fig.savefig(p, format='pdf') 
+    p.close()  
+
+if not os.path.exists("SpectraSpectre_Output/"+timestr+"/scans/"):
+        os.makedirs("SpectraSpectre_Output/"+timestr+"/scans/")
+    
+all_results_df_ms2 = all_results_df[all_results_df["mslevel"] == 2]
+for group_name, group_df in all_results_df_ms2.groupby(["filename", "query_name"]):
+    
+    # display(group_df)
+    reader = mzml.MzML(group_name[0])
+    for index, row in group_df.iterrows():
+        plt.figure(figsize=(10,8))
+        # print(row['scan'], row['collision_type'], row['energy'])
+        spectrum = reader[int(row['scan'])-1]
+        spec_title = group_name[0], group_name[1], row['collision_type'], "energy: "+str(row['energy']), "scan: "+str(row['scan'])
+        spec_plot = pa.plot_spectrum(spectrum, title=spec_title)
+        # spec_plot = pa.plot_spectrum(spectrum, title=spec_title, backend='spectrum_utils')
+        # spec_plot = pa.plot_spectrum(spectrum, title=spec_title, precursor_mz=str(row['precmz']), precursor_charge=0, backend='spectrum_utils')
+
+        # plt.show()
+    # display(group_df)
+    # display(group_df["scan"].tolist())
+    
+    
+    pdf_filename = "SpectraSpectre_Output/"+timestr+"/scans/"+group_name[0]+"_"+group_name[1]+"_scans.pdf"  
+    save_image(pdf_filename)
+    
+    plt.close("all")
+    # break
+
+# fig_nums = plt.get_fignums()
+# display(fig_nums)
+
+
+
+# In[ ]:
+
+
+"""Plot Results"""
+for group_name, grouped_df in all_results_df.groupby(['query_name', 'collision_type_energy']):
     fig1 = plt.figure(figsize=(12,8))
     plt.subplots_adjust(bottom=0.3, top=.9, wspace = .1)
-    fig1.suptitle(query['name'], y = .96, fontsize=16)
+    fig1.suptitle(group_name[0] + " : " + group_name[1], y = .96, fontsize=14)
     fig1_sub1 = fig1.add_subplot(121, title='Intensity vs RT', xlabel='retention time', ylabel='intensity')
     fig1_sub1.title.set_size(14)
-    # fig1_sub1.axvline(x=float(query['rtmin']), color='b')
-    # fig1_sub1.axvline(x=float(query['rtmax']), color='b')
-    # fig1_sub1.axvline(x=float(query['rtmin']), color='r', linestyle='--')
-    # fig1_sub1.axvline(x=float(query['rtmax']), color='r', linestyle='--')
-    # fig1_sub1.set_xlim([float(query['rtmin'])-(int_range/2), float(query['rtmax'])+(int_range/2)])
     fig1_sub1.set_ylabel('Intensity', fontsize=12)
     fig1_sub1.set_xlabel('Retention Time', fontsize=12)
     fig1_sub2 = fig1.add_subplot(122, title='peak area')
-    # fig1_sub2.set_xlabel('file', fontsize=12)
     fig1_sub2.set_ylabel('peak area', fontsize=12)
     fig1_sub2.title.set_size(14)
     fig1_sub2.tick_params('x', labelrotation=90, labelsize=8)
@@ -577,11 +699,11 @@ for i, query in enumerate(queries):
     fig1_sub2.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
     fig1_sub2.ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
     plt.subplots_adjust(bottom=0.3, top=.9, wspace = .1, left = 0.075)
-    for file_n in results_df['file'].unique():
-        file_directory, filename = file_n.rsplit('\\', 1)
-        filename_noext = os.path.splitext(filename)[0]
-        filtered_data = results_df.loc[(results_df['query_name']==query['name']) & (results_df['file']==file_n)].copy()
-        peak_area = peak_area_df.loc[filename][query['name']]
+    for unique_name in grouped_df['unique_name'].unique():
+        filtered_data = grouped_df.loc[grouped_df['unique_name']==unique_name].copy()
+        filename = filtered_data['filename'].iloc[0]
+        peak_area = peak_area_df.loc[unique_name][group_name[0]]
+        fig1_sub1.scatter(filtered_data.rt, filtered_data.i)
         fig1_sub1.plot(filtered_data.rt, filtered_data.i)
         fig1_sub2.scatter(filename, peak_area)
     ratio = 1.0
@@ -592,15 +714,6 @@ for i, query in enumerate(queries):
     y_low, y_high = fig1_sub2.get_ylim()
     fig1_sub2.set_aspect(abs((x_right-x_left)/(y_low-y_high))*ratio)
 
-"""Save Results to Files"""
-timestr = time.strftime("%Y_%m_%d_%H%M")
-def save_image(filename):
-    p = PdfPages(filename)
-    fig_nums = plt.get_fignums()
-    figs = [plt.figure(n) for n in fig_nums]
-    for fig in figs: 
-        fig.savefig(p, format='pdf') 
-    p.close()  
 
 if not os.path.exists("SpectraSpectre_Output/"+timestr):
     os.makedirs("SpectraSpectre_Output/"+timestr)
@@ -611,6 +724,9 @@ save_image(pdf_filename)
 peak_area_df_new = peak_area_df.reset_index()
 peak_area_df_new = peak_area_df_new.rename(columns = {'index':'CORE_Filename'})
 
+measured_rt_df_new = measured_rt_df.reset_index()
+measured_rt_df_new = measured_rt_df_new.rename(columns = {'index':'CORE_Filename'})
+
 raw_df.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_raw_query_df.csv")  
 
 # with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results.xlsx") as writer:
@@ -618,7 +734,11 @@ raw_df.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_raw_query_df.csv")
 #     if not MassQL_query_df.empty:
 #         MassQL_query_df.to_excel(writer, sheet_name="queries", index=False)
     
-peak_area_df_transpose = peak_area_df_new.drop(columns=['file_directory'])
+peak_area_df_new = peak_area_df_new.drop(columns=['file_directory', 'collision_type_energy', 'filename'])
+peak_area_df_transpose = peak_area_df_new
+
+measured_rt_df_new = measured_rt_df_new.drop(columns=['file_directory', 'collision_type_energy', 'filename'])
+measured_rt_df_transpose = measured_rt_df_new
 
 def remove_filename_ext(filenameext):
     # filenameext = str(filenameext)  # cast to string
@@ -626,12 +746,13 @@ def remove_filename_ext(filenameext):
     filenamenoext = os.path.splitext(str(filenameext))[0]
     return str(filenamenoext)
 
-peak_area_df_transpose['CORE_Filename'] =peak_area_df_transpose['CORE_Filename'].apply(remove_filename_ext)
-# peak_area_df_transpose['CORE_Filename'] = os.path.splitext(peak_area_df_transpose['CORE_Filename'])[0]
-
 peak_area_df_transpose.set_index('CORE_Filename',inplace=True)
 peak_area_df_transpose = peak_area_df_transpose.T
-peak_area_df_transpose.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_results.csv")  
+peak_area_df_transpose.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_peak_areas.csv")  
+
+measured_rt_df_transpose.set_index('CORE_Filename',inplace=True)
+measured_rt_df_transpose = measured_rt_df_transpose.T
+measured_rt_df_transpose.to_csv("SpectraSpectre_Output/"+timestr+"/"+timestr+"_retention_times.csv")  
 
 print("\nResults saved to:")
 print(os.getcwd()+"\\SpectraSpectre_Output\n")
@@ -639,7 +760,7 @@ print(os.getcwd()+"\\SpectraSpectre_Output\n")
 # input("Press enter to exit...")
 
 
-# In[12]:
+# In[ ]:
 
 
 filename_groups_dict = {}
@@ -657,7 +778,7 @@ for key, value in query_groups.items():
        query_groups_dict[value]=[key]
 
 
-# In[13]:
+# In[ ]:
 
 
 analysis_df = peak_area_df_transpose.copy()
@@ -679,6 +800,8 @@ analysis_df_query_grouped_T.columns.name = None
 for fname_group, fnames in filename_groups_dict.items():
     analysis_df_both_grouped[fname_group] = analysis_df_query_grouped_T[fnames].sum(axis=1)
 
+dtype_s = analysis_df_query_grouped_T.select_dtypes(include='object').columns
+analysis_df_query_grouped_T[dtype_s] = analysis_df_query_grouped_T[dtype_s].astype("float")
 
 analysis_df_filename_grouped_log2 = np.log2(1+analysis_df_filename_grouped)
 analysis_df_query_grouped_T_log2 = np.log2(1+analysis_df_query_grouped_T)
@@ -697,10 +820,15 @@ else:
     analysis_df_filename_grouped_ratio = pd.DataFrame()
 
 analysis_df_query_grouped = analysis_df_query_grouped_T.T
+
+
 analysis_df_query_grouped_ratio = {f'{a}/{b}': analysis_df_query_grouped[a].div(analysis_df_query_grouped[b]) for a, b in combinations(analysis_df_query_grouped.columns, 2)}
-analysis_df_query_grouped_ratio = pd.concat(analysis_df_query_grouped_ratio, axis=1)
-analysis_df_query_grouped_T_ratio = analysis_df_query_grouped_ratio.T
-analysis_df_query_grouped_T_ratio = analysis_df_query_grouped_T_ratio.fillna("Null")
+if analysis_df_query_grouped_ratio:
+    analysis_df_query_grouped_ratio = pd.concat(analysis_df_query_grouped_ratio, axis=1)
+    analysis_df_query_grouped_T_ratio = analysis_df_query_grouped_ratio.T
+    analysis_df_query_grouped_T_ratio = analysis_df_query_grouped_T_ratio.fillna("Null")
+else:
+    analysis_df_query_grouped_T_ratio = pd.DataFrame()
 
 analysis_df_both_grouped_ratio = {f'{a}/{b}': analysis_df_both_grouped[a].div(analysis_df_both_grouped[b]) for a, b in combinations(analysis_df_both_grouped.columns, 2)}
 if analysis_df_both_grouped_ratio:
@@ -726,11 +854,15 @@ else:
     analysis_df_filename_grouped_log2_ratio = pd.DataFrame()
 
 analysis_df_query_grouped_log2 = analysis_df_query_grouped_T_log2.T
-analysis_df_query_grouped_log2_ratio = {f'{a}_{b}': analysis_df_query_grouped_log2[a].sub(analysis_df_query_grouped_log2[b]) for a, b in combinations(analysis_df_query_grouped_log2.columns, 2)}
-analysis_df_query_grouped_log2_ratio = pd.concat(analysis_df_query_grouped_log2_ratio, axis=1)
-analysis_df_query_grouped_T_log2_ratio = analysis_df_query_grouped_log2_ratio.T
-analysis_df_query_grouped_T_log2_ratio = analysis_df_query_grouped_T_log2_ratio.fillna("Null")
 
+analysis_df_query_grouped_log2_ratio = {f'{a}_{b}': analysis_df_query_grouped_log2[a].sub(analysis_df_query_grouped_log2[b]) for a, b in combinations(analysis_df_query_grouped_log2.columns, 2)}
+if analysis_df_query_grouped_log2_ratio:
+    analysis_df_query_grouped_log2_ratio = pd.concat(analysis_df_query_grouped_log2_ratio, axis=1)
+    analysis_df_query_grouped_T_log2_ratio = analysis_df_query_grouped_log2_ratio.T
+    analysis_df_query_grouped_T_log2_ratio = analysis_df_query_grouped_T_log2_ratio.fillna("Null")
+else:
+    analysis_df_query_grouped_T_log2_ratio = pd.DataFrame()
+    
 analysis_df_both_grouped_log2_ratio = {f'{a}_{b}': analysis_df_both_grouped_log2[a].sub(analysis_df_both_grouped_log2[b]) for a, b in combinations(analysis_df_both_grouped_log2.columns, 2)}
 if analysis_df_both_grouped_log2_ratio:
     analysis_df_both_grouped_log2_ratio = pd.concat(analysis_df_both_grouped_log2_ratio, axis=1)
@@ -751,51 +883,49 @@ with pd.ExcelWriter("SpectraSpectre_Output/"+timestr+"/"+timestr+"_analysis_log2
     analysis_df_both_grouped_log2_ratio.to_excel(writer, sheet_name="both_grouped_ratio", index=True)
 
 
-# In[14]:
+# In[ ]:
 
 
 """System Suitability"""
+qthreshold = 0.1
+peak_area_df_new_r = peak_area_df_new.reset_index()
 
-QC_df = peak_area_df_new[peak_area_df_new['CORE_Filename'].str.startswith(tuple(QC_files)) | peak_area_df_new['CORE_Filename'].str.startswith('QC_')]
-# QC_df = peak_area_df_new[peak_area_df_new['CORE_Filename'].str.startswith('QC_')]
+QC_df = peak_area_df_new_r[peak_area_df_new_r['CORE_Filename'].str.startswith(tuple(QC_files))]
+QC_df_T = QC_df.set_index("CORE_Filename").T
+QC_df_T['CORE_Filename'] = QC_df_T.index
+
+peak_area_df_new_T = peak_area_df_new_r.T
 if QC_df.empty:
     print("No System Suitability Check\n")
-elif not MassQL_query_df:
-    print("No System Suitability Check\n")
 else:
-    peak_area_df_QC1 = peak_area_df_new.copy()
+    peak_area_df_QC1 = peak_area_df_new_r.copy()
     qc_dict = {'CORE_Filename': 'QC_Average'}
-
-    for index, row in MassQL_query_df.iterrows():
-        qname = row['Name']
+    for index, row in QC_df_T.iterrows():
+        qname = row['CORE_Filename']
         qave = QC_df.loc[:, qname].mean()
         qc_dict.update({qname:qave})
 
     qc_row = pd.Series(qc_dict)
     peak_area_df_QC1 = pd.concat([peak_area_df_QC1, qc_row.to_frame().T], ignore_index=True)
     peak_area_df_QC1 = peak_area_df_QC1.set_index('CORE_Filename')
-    peak_area_df_QC1 = peak_area_df_QC1.drop('file_directory', axis=1)
     peak_area_df_QC2 = peak_area_df_QC1.copy()
 
-    peak_area_df_QC2.loc["2022MCF0031_p_QCcurve_02_02.mzML","propionyl carnitine-d3"] = 1001
+    # peak_area_df_QC2.loc["2022MCF0031_p_QCcurve_02_02.mzML","propionyl carnitine-d3"] = 1001
 
-    for index, row in MassQL_query_df.iterrows():
-        qname = row['Name']
-        qthreshold = row['QC_threshold']
+    for index, row in QC_df_T.iterrows():
+        qname = row['CORE_Filename']
         qave = QC_df.loc[:, qname].mean()
         peak_area_df_QC2[qname] = peak_area_df_QC2[qname].apply(lambda x: 1 if qave==x else (None if qave == 0 else x/qave))
 
     peak_area_df_QC3 = peak_area_df_QC2.copy()
 
-    for index, row in MassQL_query_df.iterrows():
-        qname = row['Name']
-        qthreshold = row['QC_threshold']
+    for index, row in QC_df_T.iterrows():
+        qname = row['CORE_Filename']
         peak_area_df_QC3[qname] = peak_area_df_QC3[qname].apply(lambda x: True if math.isclose(1,x,abs_tol=qthreshold) else False)
 
     peak_area_df_QC = peak_area_df_QC3.copy()
     peak_area_df_QC['System_Suitability'] = peak_area_df_QC.all(axis=1)
-    # peak_area_df_QC = peak_area_df_QC[~peak_area_df_QC.index.str.startswith('QC_')]
-    peak_area_df_QC = peak_area_df_QC[~(peak_area_df_QC.index.str.startswith(tuple(QC_files)) | peak_area_df_QC.index.str.startswith('QC_'))]
+    peak_area_df_QC = peak_area_df_QC[~(peak_area_df_QC.index.str.startswith(tuple(QC_files)))]
     peak_area_df_QC = peak_area_df_QC.loc[:, peak_area_df_QC.columns.str.startswith('System_Suitability')]
 
     peak_area_df_QC = peak_area_df_QC.reset_index()
@@ -817,7 +947,7 @@ else:
     print('\n')
 
 
-# In[20]:
+# In[ ]:
 
 
 if kegg_path and not analysis_df_filename_grouped_log2_ratio.empty:
@@ -963,10 +1093,4 @@ if kegg_path and not analysis_df_filename_grouped_log2_ratio.empty:
 
 print('Complete\n')
 input("Press enter to exit...")
-
-
-# In[ ]:
-
-
-
 

@@ -1,42 +1,39 @@
 [
 	{
-	"name": "NISTSRM1950_251", 
-	"KEGG": "C00022", 
+	"name": "acetyl-carnitine-d3", 
+	"KEGG": false, 
 	"group": "A",
-	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=251.09579:TOLERANCEPPM=1000 AND RTMIN=12 AND RTMAX=14"
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=207.1418:TOLERANCEPPM=2.5 AND RTMIN=1.0 AND RTMAX=1.2"
 	},
 	{
-	"name": "NISTSRM1950_158", 
-	"KEGG": "C00024", 
+	"name": "propionyl carnitine-d3", 
+	"KEGG": false, 
 	"group": "A",
-	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=158.93919:TOLERANCEPPM=10 AND RTMIN=12 AND RTMAX=14"
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=221.1574:TOLERANCEPPM=2.5 AND RTMIN=3.2 AND RTMAX=3.6"
 	},
 	{
-	"name": "NISTSRM1950_251_or_158", 
-	"KEGG": "C00026", 
+	"name": "valeryl carnitine-d3", 
+	"KEGG": false, 
 	"group": "A",
-	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=(251.09579 OR 158.93919):TOLERANCEPPM=12 AND RTMIN=12.0 AND RTMAX=14.0"
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=249.1887:TOLERANCEPPM=2.5 AND RTMIN=4.0 AND RTMAX=4.4"
 	},
 	{
-	"name": "NISTSRM1950_473", 
-	"KEGG": "C00122", 
-	"group": "B",
-	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=473.28253:TOLERANCEPPM=1000 AND RTMIN=7.5 AND RTMAX=8.5"
+	"name": "octanoyl carnitine-d3", 
+	"KEGG": false, 
+	"group": "A",
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=291.2357:TOLERANCEPPM=2.5 AND RTMIN=5.6 AND RTMAX=6.0"
 	},
 	{
-	"name": "NISTSRM1950_277", 
-	"KEGG": "C00042", 
-	"group": "B",
-	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=277.14428:TOLERANCEPPM=10 AND RTMIN=7.5 AND RTMAX=8.5"
+	"name": "lauroyl carnitine-d3", 
+	"KEGG": false, 
+	"group": "A",
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=347.2983:TOLERANCEPPM=2.5 AND RTMIN=7.3 AND RTMAX=7.7"
 	},
 	{
-	"name": "NISTSRM1950_473_or_277", 
-	"KEGG": "C00091", 
-	"group": "B",
-	"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ=(473.28253 OR 277.14428):TOLERANCEPPM=12 AND RTMIN=7.5 AND RTMAX=8.5"
+	"name": "oleoyl carnitine-d3", 
+	"KEGG": false, 
+	"group": "A",
+	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=429.3765:TOLERANCEPPM=2.5 AND RTMIN=8.9 AND RTMAX=9.3"
 	}
 ]
-
- 
-
 

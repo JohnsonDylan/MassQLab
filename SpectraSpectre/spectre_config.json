@@ -11,7 +11,7 @@
 		"group_columns": ["USER_Column1"]},
 	"convert_raw": true,
 	"msconvert_exe": "C:/Users/johnsondyj/AppData/Local/Apps/ProteoWizard 3.0.23118.b2ed96f 64-bit/msconvert.exe",
-	"QC_files" : ["QC_2022MCF0031_p_QCcurve_02_01"],
+	"QC_files" : ["SysTest_v7_01_new.mzML_beam-type collision-induced dissociation__10.0"],
 	"kegg_path": "hsa00020",
 	"cache": true,
 	"datasaver": false
