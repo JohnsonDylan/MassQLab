@@ -1,6 +1,9 @@
 # Executable
 SpectraSpectre.exe
 
+# Directory
+SpectraSpectre/SpectraSpectre/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

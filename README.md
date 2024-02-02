@@ -14,7 +14,7 @@ Note: MassQL package is currently not available via conda, therefore anaconda en
 Default usage:
 >  1. Put mzML files into "SpectraSpectre/data/", replacing "placeholder.txt"
 >  2. Open "MassQL_Queries.xlsx" and modify queries (see Query File section below)
->  3. Run "SpectraSpectre.ipynb" in Jupyter OR run "SpectraSpectre.py" from command prompt
+>  3. Run "SpectraSpectre.exe" OR "SpectraSpectre.ipynb" in Jupyter OR run "SpectraSpectre.py" from command prompt
 >  4. Results will be output in "SpectraSpectre/data/SpectraSpectre_Output/"
 
 Custom usage:
@@ -23,33 +23,57 @@ Custom usage:
 >  	* queryfile: change this filename (or include a full path) to an alternate MassQL query file  
 
 ## Query File
-The query file (MassQL_Queries.xlsx by default) is used to define the parameters that will compose a MassQL query.
-The column headers should not be changed as they are required by SpectraSpectre.
+The query file is used to define the parameters that will compose a MassQL query.
+
+The query file to be used is defined in spectre_config.json (MassQL_Queries.json is used by default).
+
 Example queries are included by default but should be modified to acommodate your data.
 
-Description of column headers:  
->* Name: Name of query, likely the component to be identified  
->* KEGG: KEGG identifier (currently unused)  
->* Formula: Molecular formula (currently unused)  
->* Monoisotopic: The monoisotopic mass of component to be identified  
->* ion_mode: Use 1 for positive mode, 0 for negative mode  
->* TOLERANCEPPM: The tolerance for the m/z in parts per million  
->* RTMIN: The minimum value in the retention time range  
->* RTMAX: The maximum value in the retention time range  
->* QC_threshold: The tolerance for validating files versus QC standard(s). ie. 0.2 refers to a 20% threshold. (Not required for regular usage, see "System Suitability" section below)  
+Only "name" and "query" are required to compose a valid query. All other parameters are optional.
 
-## System Suitability
-SpectraSpectre is useful for rapidly validating analytical instrumentation performance by comparing new data versus an established quality control.
-SpectraSpectre will automatically compare non-QC samples versus QC samples to determine if the queried data meets a required threshold for system suitability.
+### Parameters:
 
-To use the system suitability function, define your QC samples in one of the following two ways:
-> 1) Prefix your QC mzML filename with "QC_"
-> or
-> 2) Open "spectre_config.json" and add the name(s) of the QC file(s) to the field "QC_files"
+"name":
+	> required
+	> a name that will be associated with a query and used for identification
+	> use a unique name to prevent errors
 
-If multiple QC files are present, the QC files will be averaged
+"query":
+	> The query in MassQL format
+	> https://mwang87.github.io/MassQueryLanguage_Documentation/
 
-An additional xlsx file will be generated and saved in "SpectraSpectre/data/SpectraSpectre_Output/"
+"abundance":
+	> an anticipated abundance of the peak area (ms1) or intensity (MS2)
+	> abundance validity will be measured with a 10% (ms1) or 20% (ms2) threshold of this value
 
-The QC output file contains 4 sheets. The first sheet gives an overall determination of system suitability for each non-QC file. A passing system suitability (TRUE) check means each query applied to the file produced a resultant peak area that was withing the QC_threshold tolerance of the average of the QC_files. 
 
+## spectre_config
+spectre_config.json is used to define configuration settings that will be loaded upon program initialization.
+
+### Parameters:
+
+"data_directory":
+	> path to data directory
+	> defaults to relative directory "data/" if not provided
+	> specify relative directory if within same directory as working directory, otherwise, use full path name. Json requires forward slashes in path name.
+"queryfile":
+	> path to json format query file
+	> defaults to relative filepath "MassQL_Queries.json" if not provided
+	> specify relative filepath if within same directory as working directory, otherwise, use full path name
+"metadata_file": false,
+	> not currently used
+"metadata_filename_column": false,
+	> not currently used
+"metadata_groups_column": false,
+	> not currently used
+"convert_raw": false,
+	> set to true if you have MSConvert installed and want to convert raw files to mzML
+"msconvert_exe": false,
+	> path to msconvert.exe
+	> required if you want to convert raw files to mzML
+"kegg_path": false,
+	> not currently used
+"cache": true
+	> use MassQL cache function (default)
+	> if true, feather files will be saved in your data directory alongside mzML files
+	> this makes subsequent analysis of the same data files much faster

@@ -1,39 +1,10 @@
 [
-	{
-	"name": "acetyl-carnitine-d3", 
-	"KEGG": false, 
-	"group": "A",
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=207.1418:TOLERANCEPPM=2.5 AND RTMIN=1.0 AND RTMAX=1.2"
-	},
-	{
-	"name": "propionyl carnitine-d3", 
-	"KEGG": false, 
-	"group": "A",
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=221.1574:TOLERANCEPPM=2.5 AND RTMIN=3.2 AND RTMAX=3.6"
-	},
-	{
-	"name": "valeryl carnitine-d3", 
-	"KEGG": false, 
-	"group": "A",
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=249.1887:TOLERANCEPPM=2.5 AND RTMIN=4.0 AND RTMAX=4.4"
-	},
-	{
-	"name": "octanoyl carnitine-d3", 
-	"KEGG": false, 
-	"group": "A",
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=291.2357:TOLERANCEPPM=2.5 AND RTMIN=5.6 AND RTMAX=6.0"
-	},
-	{
-	"name": "lauroyl carnitine-d3", 
-	"KEGG": false, 
-	"group": "A",
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=347.2983:TOLERANCEPPM=2.5 AND RTMIN=7.3 AND RTMAX=7.7"
-	},
-	{
-	"name": "oleoyl carnitine-d3", 
-	"KEGG": false, 
-	"group": "A",
-	"query": "QUERY scaninfo(MS2DATA) WHERE MS2PROD=429.3765:TOLERANCEPPM=2.5 AND RTMIN=8.9 AND RTMAX=9.3"
-	}
+{
+"name": "[(3R)-3-Hydroxydodecanoyl]-L-carnitine", 
+"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ= 360.27445:TOLERANCEPPM=2.5 AND RTMIN=6.45 AND RTMAX=6.75"
+},
+{
+"name": "[(3R)-3-Hydroxyhexadecanoyl]-L-carnitine", 
+"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ= 416.33705:TOLERANCEPPM=2.5 AND RTMIN=7.86 AND RTMAX=8.16"
+}
 ]
-
