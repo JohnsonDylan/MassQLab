@@ -12,9 +12,9 @@ Note: MassQL package is currently not available via conda, therefore anaconda en
 
 ## Usage
 Default usage:
->  1. Put mzML files into "SpectraSpectre/data/", replacing "placeholder.txt"
->  2. Open "MassQL_Queries.xlsx" and modify queries (see Query File section below)
->  3. Run "SpectraSpectre.exe" OR "SpectraSpectre.ipynb" in Jupyter OR run "SpectraSpectre.py" from command prompt
+>  1. Put mzML files into "SpectraSpectre/data/"
+>  2. Open "MassQL_Queries.json" and modify queries (see Query File section below)
+>  3. Run "SpectraSpectre.bat" OR "SpectraSpectre.ipynb" in Jupyter OR run "SpectraSpectre.py" from command prompt
 >  4. Results will be output in "SpectraSpectre/data/SpectraSpectre_Output/"
 
 Custom usage:
@@ -27,7 +27,7 @@ The query file is used to define the parameters that will compose a MassQL query
 
 The query file to be used is defined in spectre_config.json (MassQL_Queries.json is used by default).
 
-Example queries are included by default but should be modified to acommodate your data.
+Example queries are included by default but should be modified to accommodate your data.
 
 Only "name" and "query" are required to compose a valid query. All other parameters are optional.
 
