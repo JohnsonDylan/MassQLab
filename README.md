@@ -34,17 +34,19 @@ Only "name" and "query" are required to compose a valid query. All other paramet
 ### Parameters:
 
 "name":
-	> required
-	> a name that will be associated with a query and used for identification
-	> use a unique name to prevent errors
+>  	* required
+>  	* a name that will be associated with a query and used for identification
+>  	* use a unique name to prevent errors
 
 "query":
-	> The query in MassQL format
-	> https://mwang87.github.io/MassQueryLanguage_Documentation/
+>  	* required
+>  	* The query in MassQL format
+>  	* https://mwang87.github.io/MassQueryLanguage_Documentation/
 
 "abundance":
-	> an anticipated abundance of the peak area (ms1) or intensity (MS2)
-	> abundance validity will be measured with a 10% (ms1) or 20% (ms2) threshold of this value
+>  	* optional
+>  	* an anticipated abundance of the peak area (ms1) or intensity (MS2)
+>  	* abundance validity will be measured with a 10% (ms1) or 20% (ms2) threshold of this value
 
 
 ## spectre_config
@@ -53,27 +55,23 @@ spectre_config.json is used to define configuration settings that will be loaded
 ### Parameters:
 
 "data_directory":
-	> path to data directory
-	> defaults to relative directory "data/" if not provided
-	> specify relative directory if within same directory as working directory, otherwise, use full path name. Json requires forward slashes in path name.
+>  	* path to data directory
+>  	* defaults to relative directory "data/" if not provided
+>  	* specify relative directory if within same directory as working directory, otherwise, use full path name. Json requires forward slashes in path name.
+ 
 "queryfile":
-	> path to json format query file
-	> defaults to relative filepath "MassQL_Queries.json" if not provided
-	> specify relative filepath if within same directory as working directory, otherwise, use full path name
-"metadata_file": false,
-	> not currently used
-"metadata_filename_column": false,
-	> not currently used
-"metadata_groups_column": false,
-	> not currently used
+>  	* path to json format query file
+>  	* defaults to relative filepath "MassQL_Queries.json" if not provided
+>  	* specify relative filepath if within same directory as working directory, otherwise, use full path name
+ 
 "convert_raw": false,
-	> set to true if you have MSConvert installed and want to convert raw files to mzML
+>  	* set to true if you have MSConvert installed and want to convert raw files to mzML
+ 
 "msconvert_exe": false,
-	> path to msconvert.exe
-	> required if you want to convert raw files to mzML
-"kegg_path": false,
-	> not currently used
+>  	* path to msconvert.exe
+>  	* required if you want to convert raw files to mzML
+
 "cache": true
-	> use MassQL cache function (default)
-	> if true, feather files will be saved in your data directory alongside mzML files
-	> this makes subsequent analysis of the same data files much faster
+>  	* use MassQL cache function (default)
+>  	* if true, feather files will be saved in your data directory alongside mzML files
+>  	* this makes subsequent analysis of the same data files much faster
