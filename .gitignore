@@ -1,8 +1,16 @@
 # Executable
-SpectraSpectre.exe
+MassQLab.exe
+MassQLab_console.exe
 
 # Directory
-SpectraSpectre/SpectraSpectre/
+MassQLab/MassQLab/
+MassQLab/local/
+MassQLab/massqlab_env/
+MassQLab/dist/
+MassQLab/build/
+MassQLab/.ipynb_checkpoints/
+MassQLab/__pycache__/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

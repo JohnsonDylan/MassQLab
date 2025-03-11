@@ -1,0 +1,10 @@
+msms cluster plot, tilt names
+
+ms1 traces grid. query across col, file across row
+
+abundance bar plots, make black and white
+> legend for file names
+
+ms1_summary traces
+> split into two dif figures
+

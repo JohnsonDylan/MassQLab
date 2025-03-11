@@ -1,0 +1,9 @@
+[
+{
+"name": "2-Methylbutyryl-L-carnitine", 
+"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ= 246.16998:TOLERANCEPPM=2.5 AND RTMIN=4.03 AND RTMAX=4.33"},
+{
+"name": "3-Methylglutarylcarnitine", 
+"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ= 290.15981:TOLERANCEPPM=2.5 AND RTMIN=3.58 AND RTMAX=3.88"
+}
+]
