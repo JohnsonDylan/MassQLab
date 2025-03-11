@@ -5,6 +5,7 @@ MassQLab/MassQLab.bat
 
 # Directory
 MassQLab/MassQLab/
+MassQLab/archive/
 MassQLab/local/
 MassQLab/massqlab_env/
 MassQLab/dist/
