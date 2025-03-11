@@ -1,6 +1,7 @@
 # Executable
 MassQLab.exe
 MassQLab_console.exe
+MassQLab/MassQLab.bat
 
 # Directory
 MassQLab/MassQLab/
@@ -10,6 +11,9 @@ MassQLab/dist/
 MassQLab/build/
 MassQLab/.ipynb_checkpoints/
 MassQLab/__pycache__/
+
+# Custom
+todo.txt
 
 
 # Byte-compiled / optimized / DLL files
