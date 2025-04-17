@@ -21,11 +21,11 @@ pip install -r requirements.txt
 
 ### 3. Run
 ```bash
-py -3.9 src\MassQLab_console.py      # Run full pipeline via console
+py src\MassQLab_console.py      # Run full pipeline via console
 ```
 OR
 ```bash
-py -3.9 src\MassQLab_GUI.py          # Launch GUI (if supported)
+py src\MassQLab_GUI.py          # Launch GUI (if supported)
 ```
 OR
 ```bash
