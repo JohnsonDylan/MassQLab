@@ -6,28 +6,26 @@ MassQLab applies a series of queries (written in the language of MassQL) to a di
 MassQL: https://github.com/mwang87/MassQueryLanguage
 
 
-## Installation
+# Installation
 
 See [Setup Guide](setup_guide.md) or [Quickstart](quickstart.md) for Initial Setup Instructions 
 
-## Usage
-
-### Entry Points
+## Usage - Entry Points
 
 **MassQLab** currently supports multiple usage modes, depending on your workflow and preference:
 
-#### A) Command Line
+### A) Command Line
 
 - `src\MassQLab_console.py` — Executes the full analysis pipeline from the command line [^]
 - `src\MassQLab_GUI.py` — Launches the graphical interface [^^]
 
-#### B) Jupyter Notebooks
+### B) Jupyter Notebooks
 
 - `notebooks\MassQLab_notebook.ipynb` — Walks through the workflow with manual control
 - `notebooks\MassQLab_console.ipynb` — Executes the full analysis pipeline within a notebook [^]
 - `notebooks\MassQLab_GUI.ipynb` — Launches the GUI from within a notebook [^^]
 
-#### C) Standalone GUI *(in development)*
+### C) Standalone GUI *(in development)*
 
 - A full desktop interface is planned to support non-technical users and exploratory workflows, with minimal code and no need for Python or environment setup.
 
@@ -35,9 +33,13 @@ See [Setup Guide](setup_guide.md) or [Quickstart](quickstart.md) for Initial Set
 
 [^^] If GUI hangs or if closed while in progress, may continue running in background and may require force close via task manager
 
-## Configuration
+# Configuration
 
-Each entry point loads configurations populated from the `massqlab_config.json` file located in the project root. Some entry points (e.g., MassQLab_console.py, MassQLab_console.ipynb) run the full workflow based only on this configuration. Other entry points (e.g., MassQLab_notebook.ipynb, MassQLab_GUI.py, MassQLab_GUI.ipynb) permit manual modification of configuration at runtime.
+Each entry point loads configurations populated from the `massqlab_config.json` file located in the project root. 
+
+Some entry points (e.g., MassQLab_console.py, MassQLab_console.ipynb) run the full workflow based only on this configuration. 
+
+Other entry points (e.g., MassQLab_notebook.ipynb, MassQLab_GUI.py, MassQLab_GUI.ipynb) permit manual modification of configuration at runtime.
 
 ### Example `massqlab_config.json`
 
@@ -61,21 +63,12 @@ Each entry point loads configurations populated from the `massqlab_config.json` 
 - **`queryfile`**  
   Path to the query file (JSON, CSV, or XLSX) that defines the MassQL queries to apply to each file in the data directory.
 
-- **`analysis`**  
-  Whether to run downstream analysis on results returned from the MassQL queries (`true` or `false`).
+### Additional Config Parameters
 
-- **`cache_setting`**  
-  If `true`, saves an intermediate [Feather](https://arrow.apache.org/docs/python/feather.html) file to disk and uses it for faster re-querying.
-
-- **`convert_raw`**  
-  If `true`, attempts to convert raw files to `.mzML`.  
-  *Note:* This feature is experimental. It is recommended to convert files using [ProteoWizard msconvert](https://proteowizard.sourceforge.io/) before using MassQLab.
-
-- **`msconvertexe`**  
-  Path to the `msconvert.exe` executable used for raw-to-mzML conversion (only used if `convert_raw` is `true`). [MSConvert](#msconvert)
+For optional fields and advanced configuration, see the [Config File Advanced](#config-file-advanced) section.
 
 
-## Query File
+# Query File
 
 The **query file** (`queryfile`) defines the MassQL queries to be executed, along with a user-defined name for each query.
 
@@ -91,21 +84,17 @@ Example query files are provided in the root of the MassQLab repository:
 Each query in the file must include the following:
 
 - **`name`**:  
-  A unique identifier for the query used in result files and visualizations.  
-  - Should be unique within the same query type (MS1 or MS2).  
-  - Duplicate names are allowed across types (e.g., same name used for an MS1 and an MS2 query).  
-  - Note: Very long query names may cause issues in some output files.
+  A unique name for each query (per MS1/MS2 type). Avoid very long names to prevent output issues.
 
 - **`query`**:  
   The [MassQL query](#massql-queries) string itself.
-  - Queries fall into two categories: **MS1** and **MS2**, which are processed independently.  
 
-### Additional Parameters
+### Additional Query Parameters
 
 For optional fields and advanced query configuration, see the [Query File Advanced](#query-file-advanced) section.
 
 
-## MassQL Queries
+# MassQL Queries
 
 See https://mwang87.github.io/MassQueryLanguage_Documentation/ for full documentation
 
@@ -133,7 +122,7 @@ See https://mwang87.github.io/MassQueryLanguage_Documentation/ for full document
 - Get MS2 scans where a product ion matches an arithmetic expression  
   `QUERY scaninfo(MS2DATA) WHERE MS2PROD=144+formula(CH2)`
 
-## Launch
+# Launch
 
 ### Command Line
 
@@ -159,25 +148,41 @@ Navigate to the `notebooks/` directory and open the desired notebook to begin wo
 
 ## Results
 
-Results can be found in MassQLab_Output directory located within the defined data_directory. MassQLab_Output directory contains timestamped subdirectories.
+Results are saved in `MassQLab_Output` inside the defined `data_directory`, organized by timestamp.
 
-- ms1_raw_df.csv: Raw output returned from applying MS1 MassQL queries and merged with query metadata
-- ms1_analysis_df.csv: Output after peak fitting analysis of ms1_raw_df
-- ms1_RT_analysis_df.csv: Statistical analysis of MS1 peak center retention time relative to retention defined in query
-- ms1_traces.pdf: Document containing plots showing gaussian fit of each query applied to each file
-- ms1_summary_traces.pdf: Document containing plots of all peaks for each query
-- ms1_summary_areas.pdf: Document containing plots of areas of all peaks for each query
-- ms1_summary_areas_inverse.pdf: Document containing plots of areas of all peaks for each file
+**MS1 Outputs**
+- `ms1_raw_df.csv`: Raw query results + metadata  
+- `ms1_analysis_df.csv`: Peak fitting analysis  
+- `ms1_RT_analysis_df.csv`: RT stats vs. query RT  
+- `ms1_traces.pdf`: Gaussian fits per query/file  
+- `ms1_summary_traces.pdf`: All peaks per query  
+- `ms1_summary_areas.pdf`: Peak areas per query  
+- `ms1_summary_areas_inverse.pdf`: Peak areas per file  
 
-- ms2_raw_df.csv: Raw output returned from applying MS2 MassQL queries and merged with query metadata
-- ms2_analysis_df.csv: Output after peak picking analysis of ms2_raw_df
-- ms2_plots.pdf: Document containing plots of intensity of each scan returned for each file and query
-  - Note: lines are shown between points that share the same MS1 scan
-  - Note: highest intensity scan for each condition is used for downstream analysis
-- ms2_summary_plots.pdf: Document containing plots of highest intensity scan for each query
-- ms2_cluster_plots_group.pdf: Document containing summary plots of each group of queries as defined by "group" parameter in queryfile if present
+**MS2 Outputs**
+- `ms2_raw_df.csv`: Raw query results + metadata  
+- `ms2_analysis_df.csv`: Peak picking analysis  
+- `ms2_plots.pdf`: Scan intensities (lines connect shared MS1 scans)  
+- `ms2_summary_plots.pdf`: Top scan per query  
+- `ms2_cluster_plots_group.pdf`: Summary by query group (if defined)
 
 
+
+## Config File Advanced
+
+- **`analysis`**  
+  Whether to run downstream analysis on results returned from the MassQL queries (`true` or `false`).
+
+- **`cache_setting`**  
+  If `true`, saves an intermediate [Feather](https://arrow.apache.org/docs/python/feather.html) file to disk and uses it for faster re-querying.
+
+- **`convert_raw`**  
+  If `true`, attempts to convert raw files to `.mzML`.  
+  *Note:* This feature is experimental. It is recommended to convert files using [ProteoWizard msconvert](https://proteowizard.sourceforge.io/) before using MassQLab.
+
+- **`msconvertexe`**  
+  Path to the `msconvert.exe` executable used for raw-to-mzML conversion (only used if `convert_raw` is `true`). [MSConvert](#msconvert)
+  
 ## Query File Advanced
 This section describes parameters that may be used in the queryfile in addition to "name" and "query"
 
