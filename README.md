@@ -16,8 +16,8 @@ See [Setup Guide](setup_guide.md) or [Quickstart](quickstart.md) for Initial Set
 
 ### A) Command Line
 
-- `src\MassQLab_console.py` — Executes the full analysis pipeline from the command line [^]
-- `src\MassQLab_GUI.py` — Launches the graphical interface [^^]
+- `py src\MassQLab_console.py` — Executes the full analysis pipeline from the command line [^]
+- `py src\MassQLab_GUI.py` — Launches the graphical interface [^^]
 
 ### B) Jupyter Notebooks
 
