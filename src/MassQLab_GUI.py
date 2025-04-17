@@ -1,4 +1,5 @@
-from MassQLab_functions import *
+from MassQLab_workflow import *
+
 import tkinter as tk
 from tkinter import filedialog, scrolledtext
 import threading
@@ -33,14 +34,12 @@ class App(tk.Tk):
         self.init_ui()
 
     def init_ui(self):
-        # Your existing UI setup code...
-
         # Adjust the layout configuration
         self.grid_columnconfigure(1, weight=1)  # Makes middle column expandable
 
         # Retrieve configuration from configure_MassQLab
         configurations = configure_MassQLab()
-        config_keys = ['data_directory', 'queryfile', 'metadata_file', 'metadata_filename_column', 'metadata_group_columns', 'kegg_path', 'convert_raw', 'msconvertexe', 'use_cache']
+        config_keys = ['data_directory', 'queryfile', 'metadata_file', 'metadata_filename_column', 'metadata_group_columns', 'kegg_path', 'convert_raw', 'msconvertexe', 'use_cache', 'datasaver', 'analysis']
         self.grid_rowconfigure(len(config_keys)+1, weight=1)
 
         self.entries = {}
@@ -58,7 +57,7 @@ class App(tk.Tk):
         row_offset = 0  # Offset to track where to start placing checkbuttons
 
         for i, key in enumerate(config_keys):
-            if key in ['convert_raw', 'use_cache']:
+            if key in ['convert_raw', 'use_cache', 'analysis']:
                 self.check_vars[key] = tk.BooleanVar(value=configurations[i])
                 self.check_vars[key].trace_add('write', lambda name, index, mode, var_name=key: log_change(var_name, index, mode))
 
@@ -66,7 +65,7 @@ class App(tk.Tk):
                 # Instead of placing now, store it with the intended row index
                 checkbuttons.append((i, checkbutton))
                 row_offset += 1  # Increment offset for each checkbutton found
-            elif key in ['metadata_file', 'metadata_filename_column', 'metadata_group_columns', 'kegg_path']:
+            elif key in ['metadata_file', 'metadata_filename_column', 'metadata_group_columns', 'kegg_path', 'datasaver']:
                 pass
             else:
                 tk.Label(self, text=key).grid(row=i - row_offset, column=0, sticky='w')
@@ -95,7 +94,7 @@ class App(tk.Tk):
         for i, (original_row, checkbutton) in enumerate(checkbuttons):
             checkbutton.grid(row=len(config_keys) - len(checkbuttons) + i, column=1, sticky='w')
             
-        self.run_button = tk.Button(self, text="Run", command=self.run_main_tk, bg="lightgreen", fg="black", font=("Arial", 10, "bold"))
+        self.run_button = tk.Button(self, text="Run", command=self.run_main, bg="lightgreen", fg="black", font=("Arial", 10, "bold"))
         # Move the "Run" button to the bottom right. Assuming 12 is a new row index after your last widget.
 
         # Adjust the console's placement to allow it to expand properly
@@ -138,60 +137,32 @@ class App(tk.Tk):
                 self.entries[key].insert(0, selected_file)
                 print(f"Configuration changed: {key} set to {selected_file}")
 
-    def run_main_tk(self):
+    def run_main(self):
         self.run_button.config(state='disabled', bg='red', fg='white')
-        args = [self.entries[key].get() for key in self.entries]
-        threading.Thread(target=lambda: self.execute_main_tk(*args)).start()
+    
+        args = [
+            self.entries['data_directory'].get(),
+            self.entries['queryfile'].get(),
+            None,  # metadata_file (you skipped it in UI)
+            None,  # metadata_filename_column
+            None,  # metadata_group_columns
+            None,  # kegg_path
+            self.check_vars['convert_raw'].get(),
+            self.entries['msconvertexe'].get(),
+            self.check_vars['use_cache'].get(),
+            None,  # datasaver
+            self.check_vars['analysis'].get()
+        ]
+    
+        threading.Thread(target=lambda: self.execute_main(*args)).start()
 
-    def execute_main_tk(self, *args):
-        main_tk(*args)
+    def execute_main(self, *args):
+        main(*args)
         self.run_button.config(state='normal', bg='lightgreen', fg='black')
 
     def on_closing(self):
         sys.stdout = sys.__stdout__
         self.destroy()
-
-# Ensure you replace this with the actual main_tk function code you provided earlier, with appropriate modifications if necessary.
-def main_tk(data_directory=None, queryfile=None, metadata_file=None, metadata_filename_column=None, metadata_group_columns=None, kegg_path=None, convert_raw=None, msconvertexe=None, cache_setting=None, datasaver=None):
-    if data_directory and queryfile:
-        sys.stdout.write(f"\nRun Start\n") 
-        queries, ms1_query_df, ms2_query_df, query_groups, name_kegg_dict = create_queries(queryfile)
-        if queries:
-            convert_raw_files(convert_raw, msconvertexe, data_directory)
-            file_count = mzml_file_count(data_directory)
-            try:
-                raw_df_ms1, raw_df_ms2, filename_groups, timestr = query_files(data_directory, queries, datasaver)
-            except Exception as e:
-                print(f"Exception caught: {e}")
-                return
-            if not raw_df_ms1.empty:
-                ms1_analysis_df = analysis_ms1(raw_df_ms1, data_directory, timestr)
-                ms1_analysis_df = ms1_query_analysis_merge(ms1_analysis_df, ms1_query_df)
-                ms1_analysis_df = ms1_validity_and_QC(ms1_analysis_df)
-                ms1_analysis_df = impute_ms1(ms1_analysis_df)
-                rt_analysis_ms1(ms1_analysis_df, data_directory, timestr)
-                summary_ms1_traces(raw_df_ms1, data_directory, timestr)
-                summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr)
-                if not ms1_analysis_df.empty:
-                    export_ms1_analysis_df(ms1_analysis_df, data_directory, timestr)
-                    summary_ms1_areas(ms1_analysis_df, data_directory, timestr)
-                    summary_ms1_areas_system_test(ms1_analysis_df, data_directory, timestr)
-                    summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr)
-                    reportlab_ms1(ms1_analysis_df, data_directory, timestr)
-            if not raw_df_ms2.empty:
-                plot_ms2(raw_df_ms2, data_directory, timestr)
-                ms2_analysis_df = analysis_ms2(raw_df_ms2, ms2_query_df)
-                ms2_analysis_df = impute_ms2(ms2_analysis_df)
-                export_ms2_analysis_df(ms2_analysis_df, data_directory, timestr)
-                cluster_plot_ms2(ms2_analysis_df, data_directory, timestr)      
-                cluster_plot_ms2_alt(ms2_analysis_df, data_directory, timestr)
-                cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr)
-                summary_ms2(ms2_analysis_df, data_directory, timestr)
-                save_ms2_scans(ms2_analysis_df, data_directory, timestr)
-                reportlab_ms2(ms2_analysis_df, data_directory, timestr)
-        sys.stdout.write(f"\nRun Complete\n") 
-    else:
-        sys.stdout.write(f"\nNo data_directory and/or queryfile defined\n") 
 
 if __name__ == "__main__":
     app = App()
