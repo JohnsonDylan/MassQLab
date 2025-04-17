@@ -21,9 +21,9 @@ See [Setup Guide](setup_guide.md) for Initial Setup Instructions
 
 #### B) Jupyter Notebooks
 
-- `notebooks/MassQLab_notebook.ipynb` — Walks through the workflow with manual control
-- `notebooks/MassQLab_console.ipynb` — Executes the full analysis pipeline within a notebook [^]
-- `notebooks/MassQLab_GUI.ipynb` — Launches the GUI from within a notebook [^^]
+- `notebooks\MassQLab_notebook.ipynb` — Walks through the workflow with manual control
+- `notebooks\MassQLab_console.ipynb` — Executes the full analysis pipeline within a notebook [^]
+- `notebooks\MassQLab_GUI.ipynb` — Launches the GUI from within a notebook [^^]
 
 #### C) Standalone GUI *(in development)*
 
