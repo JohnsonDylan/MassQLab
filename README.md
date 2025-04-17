@@ -6,9 +6,11 @@ MassQLab applies a series of queries (written in the language of MassQL) to a di
 MassQL: https://github.com/mwang87/MassQueryLanguage
 
 
-## Usage
+## Installation
 
 See [Setup Guide](setup_guide.md) for Initial Setup Instructions
+
+## Usage
 
 ### Entry Points
 
@@ -29,13 +31,13 @@ See [Setup Guide](setup_guide.md) for Initial Setup Instructions
 
 - A full desktop interface is planned to support non-technical users and exploratory workflows, with minimal code and no need for Python or environment setup.
 
-[^] Pulls configuration settings from massqlab_config.json
+[^] Requires massqlab_config.json to be configured upfront
 
 [^^] If GUI hangs or if closed while in progress, may continue running in background and may require force close via task manager
 
 ## Configuration
 
-MassQLab configuration is determined by the point of entry (e.g., notebook or command line), with settings automatically populated from the `massqlab_config.json` file located in the project root.
+Each entry point loads configurations populated from the `massqlab_config.json` file located in the project root. Some entry points (e.g., MassQLab_console.py, MassQLab_console.ipynb) run the full workflow based only on this configuration. Other entry points (e.g., MassQLab_notebook.ipynb, MassQLab_GUI.py, MassQLab_GUI.ipynb) permit manual modification of configuration at runtime.
 
 ### Example `massqlab_config.json`
 
@@ -72,25 +74,17 @@ MassQLab configuration is determined by the point of entry (e.g., notebook or co
 - **`msconvertexe`**  
   Path to the `msconvert.exe` executable used for raw-to-mzML conversion (only used if `convert_raw` is `true`). [MSConvert](#msconvert)
 
-### MassQLab_notebook and GUI
-
-These options still ingest massqlab_config.json but allow manual override and control of configuration
-
 
 ## Query File
 
-The **query file** (`queryfile`) defines the MassQL queries to be executed, along with a user-defined name for each query. MassQLab supports query files in the following formats:
-
-- `.json`
-- `.csv`
-- `.xlsx`
+The **query file** (`queryfile`) defines the MassQL queries to be executed, along with a user-defined name for each query.
 
 ### Example Files
 
 Example query files are provided in the root of the MassQLab repository:
 
 - `MassQL_Queries.json`
-- `MassQL_Queries.csv`
+- `MassQL_Queries.csv` (xlsx also permitted with same schema)
 
 ### Required Fields
 
@@ -103,9 +97,8 @@ Each query in the file must include the following:
   - Note: Very long query names may cause issues in some output files.
 
 - **`query`**:  
-  The MassQL query string itself.  
+  The [MassQL query](#massql-queries) string itself.
   - Queries fall into two categories: **MS1** and **MS2**, which are processed independently.  
-  - See the **"MassQL Queries"** section for detailed query syntax.
 
 ### Additional Parameters
 
@@ -238,3 +231,4 @@ You will need to identify the path to "msconvert.exe" and select it in the "msco
 On my system, the path to mscovert.exe looks like this:
 `"C:\Users\username\AppData\Local\Apps\ProteoWizard 3.0.23118.b2ed96f 64-bit\msconvert.exe"`
 
+____
