@@ -1,8 +1,8 @@
 {
-	"data_directory": "C:/Users/johnsondyj/Documents/Projects/DylanJohnson/data_for_MassQLab/mass_spec_data/kirsten",
-	"queryfile" : "C:/Users/johnsondyj/Documents/Projects/DylanJohnson/data_for_MassQLab/query_files/MassQL_Queries_PosIonCarnitines_new.csv",
-	"analysis" : true,
-	"cache_setting" : true,
-	"convert_raw" : false,
-	"msconvertexe" : false
+	"data_directory": "data/",     //directory containing mzML files for analysis
+	"queryfile" : "MassQL_Queries.csv",     //file containing named MassQL queries
+	"analysis" : true,     //leave true for typical full workflow. false for core workflow
+	"cache_setting" : true,     //leave true in most cases
+	"convert_raw" : false,     //experimental. Default false. See documentation.
+	"msconvertexe" : false     //experimental. Default false. See documentation.
 }
