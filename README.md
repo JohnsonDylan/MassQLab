@@ -8,7 +8,7 @@ MassQL: https://github.com/mwang87/MassQueryLanguage
 
 ## Installation
 
-See [Setup Guide](setup_guide.md) or [Quickstart](setup_guide.md#quickstart) for Initial Setup Instructions 
+See [Setup Guide](setup_guide.md) or [Quickstart](quickstart.md) for Initial Setup Instructions 
 
 ## Usage
 
