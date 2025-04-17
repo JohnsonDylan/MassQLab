@@ -115,7 +115,7 @@ def run():
         else:
             sys.stdout.write(f"\nExiting...\n") 
             sys.stdout.flush()
-            time.sleep(3)
+            time.sleep(1)
             pass
     else:
         sys.stdout.write(f"!!! data_directory and/or queryfile not found\n") 
@@ -126,5 +126,5 @@ def run():
         else:
             sys.stdout.write(f"\nExiting...\n") 
             sys.stdout.flush()
-            time.sleep(3)
+            time.sleep(1)
             pass

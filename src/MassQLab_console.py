@@ -7,10 +7,4 @@
 # jupyter nbconvert --to script "<absolute_path_to_notebook>.ipynb"
 
 from MassQLab_workflow import *
-
-# Reload the module
-importlib.reload(MassQLab_workflow)
-
-# Re-import everything
-from MassQLab_workflow import *
 run()
