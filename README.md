@@ -30,6 +30,7 @@ See [Setup Guide](setup_guide.md) for Initial Setup Instructions
 - A full desktop interface is planned to support non-technical users and exploratory workflows, with minimal code and no need for Python or environment setup.
 
 [^] Pulls configuration settings from massqlab_config.json
+
 [^^] If GUI hangs or if closed while in progress, may continue running in background and may require force close via task manager
 
 ## Configuration
@@ -66,10 +67,10 @@ MassQLab configuration is determined by the point of entry (e.g., notebook or co
 
 - **`convert_raw`**  
   If `true`, attempts to convert raw files to `.mzML`.  
-  *Note:* This feature is experimental. It is recommended to convert files using [ProteoWizard msconvert](http://proteowizard.sourceforge.net/tools.shtml) before using MassQLab.
+  *Note:* This feature is experimental. It is recommended to convert files using [ProteoWizard msconvert](https://proteowizard.sourceforge.io/) before using MassQLab.
 
 - **`msconvertexe`**  
-  Path to the `msconvert.exe` executable used for raw-to-mzML conversion (only used if `convert_raw` is `true`). [MSConvert](#MSConvert)
+  Path to the `msconvert.exe` executable used for raw-to-mzML conversion (only used if `convert_raw` is `true`). [MSConvert](#msconvert)
 
 ### MassQLab_notebook and GUI
 
@@ -139,33 +140,16 @@ See https://mwang87.github.io/MassQueryLanguage_Documentation/ for full document
 - Get MS2 scans where a product ion matches an arithmetic expression  
   `QUERY scaninfo(MS2DATA) WHERE MS2PROD=144+formula(CH2)`
 
-
-### Details  
-1. MS1 queries will return a dataframe of total intensity of MS1 scan vs retention time for each MS1 scan that matches query
-    - Peak will be fit with a gaussian and area will be determined from gaussian.
-    - Peak must meet detection criteria to be considered valid
-      - peak prominence > Intensity_Max / 10
-      - peak height > Intensity_Average x 1.1
-      - peak center > (RTMIN - (RTMAX - RTMIN))
-      - peak center < (RTMAX + (RTMAX - RTMIN))
-      - fwhm < (RTMAX - RTMIN)
-
-
-2. MS2 queries will return a dataframe of total intensity of MS2 scan vs retention time for each MS2 scan that matches query 
-   - Downstream analysis will split MS2 query results for each file based on any collision energy grouping  as defined in scan metadata
-     - ie. HCD and CID will be split
-     - ie. Collision energy 20 vs 30 vs 40 will be split
-     - An MS2 group will be each combination, ie. HCD_20, CID_30, etc. 
-   - When more than one valid scan is returned from the MassQL query for an MS2 group, the highest intensity scan will be used for downstream analysis
-
 ## Launch
 
 ### Command Line
 
-From the project root, ensure your virtual environment is activated and all requirements are installed. Then run one of the following:
+From the project root, ensure your virtual environment is activated and all requirements are installed [(see Setup Guide)](setup_guide.md). Then run one of the following:
 
 ```bash
 py src\MassQLab_console.py      # Launches the console workflow
+```
+```bash
 py src\MassQLab_GUI.py          # Launches the GUI (if available)
 ```
 
@@ -226,6 +210,23 @@ Any additional parameters in queryfile will also be carried over into excel/csv 
         - metabolites: KEGG, InChI string/key, CASRN, SMILES, IUPAC, PubChem ID
         - proteins: PDB ID, Gene name, UniProt, Ensembl, RefSeq
 
+## MassQLab Query Details  
+1. MS1 queries will return a dataframe of total intensity of MS1 scan vs retention time for each MS1 scan that matches query
+    - Peak will be fit with a gaussian and area will be determined from gaussian.
+    - Peak must meet detection criteria to be considered valid
+      - peak prominence > Intensity_Max / 10
+      - peak height > Intensity_Average x 1.1
+      - peak center > (RTMIN - (RTMAX - RTMIN))
+      - peak center < (RTMAX + (RTMAX - RTMIN))
+      - fwhm < (RTMAX - RTMIN)
+
+
+2. MS2 queries will return a dataframe of total intensity of MS2 scan vs retention time for each MS2 scan that matches query 
+   - Downstream analysis will split MS2 query results for each file based on any collision energy grouping  as defined in scan metadata
+     - ie. HCD and CID will be split
+     - ie. Collision energy 20 vs 30 vs 40 will be split
+     - An MS2 group will be each combination, ie. HCD_20, CID_30, etc. 
+   - When more than one valid scan is returned from the MassQL query for an MS2 group, the highest intensity scan will be used for downstream analysis
 
 ## MSConvert
 mzML files can be created from raw files on the fly if MSConvert (part of ProteoWizard software) is installed separately
