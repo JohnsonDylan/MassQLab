@@ -4,7 +4,7 @@ import sys
 import io, os, json, time, fnmatch, glob, warnings, subprocess, pandas as pd, numpy as np, regex as re, contextlib, textwrap
 from pathlib import Path
 from pyteomics import mzxml, mzml, auxiliary
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 from scipy.signal import find_peaks, peak_widths
 from scipy.interpolate import interp1d
 from itertools import product
@@ -100,7 +100,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                     interpolated_rt = generate_linear_array(rtmin, rtmax)
                     gaussian_y = gaussian(interpolated_rt, peak_y, measured_rt, sigma)
                     peak_area = peak_y * sigma * np.sqrt(2 * np.pi)
-                    peak_area_alt = trapz(ydata_all, x=xdata_all)
+                    peak_area_alt = trapezoid(ydata_all, x=xdata_all)
 
                     ax.plot(interpolated_rt, gaussian_y, label='Gaussian Peak', color='r', lw=2)
                     ax.hlines(h, left, right, color='blue')

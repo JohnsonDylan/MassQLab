@@ -4,7 +4,7 @@ import sys
 import io, os, json, time, fnmatch, glob, warnings, subprocess, pandas as pd, numpy as np, regex as re, contextlib, textwrap
 from pathlib import Path
 from pyteomics import mzxml, mzml, auxiliary
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 from scipy.signal import find_peaks, peak_widths
 from scipy.interpolate import interp1d
 from itertools import product

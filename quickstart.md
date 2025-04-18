@@ -14,8 +14,8 @@ pip install -r requirements.txt
 ### 2. massqlab_config.json
 ```json
 {
-  "data_directory": "data/",             // Default data directory in root of project, paste mzML files here or adjust directory
-  "queryfile": "MassQL_Queries.csv"      // Default query file, modify directly or point to a different query file
+  "data_directory": "data/",
+  "queryfile": "MassQL_Queries.csv"
 }
 ```
 
