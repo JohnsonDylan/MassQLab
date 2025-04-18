@@ -17,6 +17,7 @@ todo.txt
 venv_setup.txt
 massqlab_config-freeze.json
 requirements-freeze.txt
+requirements_in.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
