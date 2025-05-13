@@ -1,4 +1,4 @@
-# Setup Guide (Virtual Environment)
+# Setup Guide
 
 Follow these steps to set up a virtual environment and install dependencies for MassQLab. (Or see [Quickstart](quickstart.md))
 
@@ -32,21 +32,21 @@ Make sure Python 3.9 is listed. If not:
 
 If you get an error, Python may not be installed or not added to your system path.
 
-### 3. Install virtualenv
+### 3. Use virtualenv OR conda environemnt 
+#### 3.A. Create and Activate a Virtual Environment
 
+Ensure virtualenv is installed
 ```bash
 pip install virtualenv
 ```
 
-### 4. Create and Activate the Virtual Environment
-
-Navigate to the project directory if needed:
+Navigate to the project directory:
 
 ```bash
 cd path\to\MassQLab
 ```
 
-Create and activate the environment:
+Create and activate the virtual environment:
 
 ```bash
 py -3.9 -m venv env
@@ -55,12 +55,37 @@ env\Scripts\activate
 
 You should now see `(env)` at the start of your terminal prompt.
 
-### 5. Install Dependencies
+#### 3.B. Create and Activate a Conda Environment
 
+Ensure Anaconda is installed
+https://www.anaconda.com/docs/getting-started/anaconda/install
+
+Navigate to the project directory:
+
+```bash
+cd path\to\MassQLab
+```
+
+Create and activate the conda environment:
+
+```bash
+conda create -n env python=3.9
+conda activate env
+```
+
+You should now see `(env)` at the start of your terminal prompt.
+
+### 4. Install Dependencies
+
+The following may be sufficient:
+```bash
+pip install jupyterlab massql reportlab openpyxl matplotlib
+```
+
+Otherwise use:
 ```bash
 pip install -r requirements.txt
 ```
 
 You're now ready to use the notebooks in `notebooks/` or run the workflow using provided scripts.
-
 ____
