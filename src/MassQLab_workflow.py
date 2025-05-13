@@ -79,7 +79,6 @@ def process_ms2(raw_df_ms2, ms2_query_df, data_directory, timestr):
 
     if not ms2_analysis_df.empty:
         cluster_plot_ms2(ms2_analysis_df, data_directory, timestr)
-        # cluster_plot_ms2_alt(ms2_analysis_df, data_directory, timestr)
         cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr)
         summary_ms2(ms2_analysis_df, data_directory, timestr)
         save_ms2_scans(ms2_analysis_df, data_directory, timestr)

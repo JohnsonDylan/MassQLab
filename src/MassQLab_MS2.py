@@ -169,33 +169,6 @@ def cluster_plot_ms2(ms2_analysis_df, data_directory, timestr):
     sys.stdout.flush()
 
 
-"""visualize top ms2 peaks for each query clustered by energy, subclustered by filename"""
-def cluster_plot_ms2_alt(ms2_analysis_df, data_directory, timestr):
-    if not ms2_analysis_df.empty:
-        with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots_alt.pdf") as pdf:
-            for group_name, grouped_df in ms2_analysis_df.groupby('collision_type'):
-                for g_group_name, g_grouped_df in grouped_df.groupby(['query_name', 'query']):
-                    if not grouped_df.empty and len(grouped_df) > 0:
-                        pivot_df = g_grouped_df.pivot(index='filename', columns='energy', values='i')
-                        pivot_df.plot(kind='bar', figsize=(10, 6))
-                        plt.xlabel('Filename')
-                        plt.ylabel('Intensity')
-                        plt_title = f'{g_group_name[0]}_{group_name}'
-                        plt_title_w_query = f'{g_group_name[0]}, {group_name}, {g_group_name[1]}'
-                        wrapped_title = textwrap.fill(plt_title_w_query, width=100)
-                        plt.title(wrapped_title, fontsize=8)
-                        # plt.title(f'{g_group_name[1]}', fontsize=8)
-                        pdf.savefig()
-                        
-                        if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots_alt/"):
-                            os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots_alt/")
-                        plt.savefig(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots_alt/"+plt_title+'.png')
-                        plt.close('all')
-    sys.stdout.write(f"\nCreated ms2 cluster plot alt.")
-    sys.stdout.flush()
-
-
-
 """visualize top ms2 peaks for all queries in query group (if present)"""
 def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr):
 
