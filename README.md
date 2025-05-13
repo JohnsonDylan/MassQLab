@@ -229,6 +229,47 @@ Any additional parameters in queryfile will also be carried over into excel/csv 
      - An MS2 group will be each combination, ie. HCD_20, CID_30, etc. 
    - When more than one valid scan is returned from the MassQL query for an MS2 group, the highest intensity scan will be used for downstream analysis
 
+## Peak Detection and Integration
+
+Peaks are first detected from `y-data` vs `x-data` using `scipy.signal.find_peaks()` with the following thresholds:
+
+- **Height**: greater than `mean(ydata) * 1.1`
+- **Distance**: at least 5 observations apart
+- **Prominence**: at least `max(ydata) / 10`
+
+### Peak Filtering
+
+Detected peaks are then filtered based on their x-axis value within a target retention time window:
+
+```
+(rtmin - range_rt) ≤ peak_x ≤ (rtmax + range_rt)
+```
+
+Where:
+
+```
+range_rt = rtmax - rtmin
+```
+
+Peaks are further refined by excluding those with excessive width:
+
+```
+FWHM < range_rt
+```
+
+### Peak Ranking and Analysis
+
+The remaining peaks are ranked by their height, and the most prominent one is selected for detailed analysis.  
+The Full Width at Half Maximum (FWHM) is calculated and used to approximate the peak as a Gaussian function.
+
+```
+σ = fwhm / (2 * sqrt(2 * log(2)))
+peak_area = height × σ × sqrt(2π)
+```
+
+- **`peak_area_alt`**: Integrates the total signal using trapezoidal integration, without relying on peak picking.
+- **`peak_intensity`**: Records the maximum y-value (intensity) from the data, also independent of peak picking.
+
 ## MSConvert
 mzML files can be created from raw files on the fly if MSConvert (part of ProteoWizard software) is installed separately
 
