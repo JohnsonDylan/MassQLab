@@ -26,7 +26,28 @@ from MassQLab_core import *
 def index_to_xdata(xdata, indices):
         return interp1d(np.arange(len(xdata)), xdata)(indices)
 
-"""Core function that ingests raw ms1 dataframe, analyzes peaks, analyzes retention time, and outputs ms1 analysis dataframe and plots"""
+"""Core function that ingests raw ms1 dataframe, analyzes peaks, analyzes retention time, and outputs ms1 analysis dataframe and plots
+Peaks are first detected from y-data vs x-data using scipy.signal.find_peaks() with thresholds for height, prominence, and spacing.
+Height: greater than mean(ydata) * 1.1
+Distance: at least 5 observations apart
+Prominence: at least max(ydata) / 10 
+
+Detected peaks are then filtered based on their x-axis value location within a target retention time window.
+Peak x-axis value: (rtmin - range_rt) to (rtmax + range_rt) where range_rt = rtmax - rtmin
+
+Detected peaks are further refined by excluding peaks with excessive width. 
+fwhm < range_rt where range_rt = rtmax - rtmin
+
+
+The remaining peaks are ranked by their height, and the most prominent one is selected for detailed analysis. The full width at half maximum (FWHM) is calculated which is then used to approximate the peak as a Gaussian function. The area under this Gaussian is computed using:
+𝜎 = fwhm / (2 * sqrt(2 * log(2)))
+peak_area=height×𝜎×sqrt(2𝜋)
+
+peak_area_alt inegrates the total signal of the returned data without regard for peak picking.
+
+peak_intensity records the y-maximum of the returned data without regard for peak picking.
+"""
+
 def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                      fwhm_thresh=1, rt_thresh=0.1, datapoint_thresh=5,
                      abundance_thresh_ms1=10, impute=True, export=True):
@@ -70,10 +91,6 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                 xdata_all = grouped_df.rt.values
                 ydata_all = grouped_df.i.values
 
-                def custom_score(peak):
-                    normalized_height = ydata_all[peak] / max(ydata_all)
-                    return normalized_height
-
                 peaks, properties = find_peaks(
                     ydata_all,
                     height=abs(ydata_all.mean() * 1.1),
@@ -84,7 +101,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                 widths, height, l_ips, r_ips = peak_widths(ydata_all, filtered_peaks, rel_height=0.5)
                 real_width = index_to_xdata(xdata_all, r_ips) - index_to_xdata(xdata_all, l_ips)
                 final_peaks = [p for i, p in enumerate(filtered_peaks) if real_width[i] < range_rt]
-                top_peaks = sorted(final_peaks, key=custom_score, reverse=True)[:2]
+                top_peaks = sorted(final_peaks, key=lambda p: ydata_all[p] / max(ydata_all), reverse=True)[:2]
 
                 if top_peaks:
                     peak = top_peaks[0]
