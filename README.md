@@ -153,18 +153,21 @@ Results are saved in `MassQLab_Output` inside the defined `data_directory`, orga
 **MS1 Outputs**
 - `ms1_raw_df.csv`: Raw query results + metadata  
 - `ms1_analysis_df.csv`: Peak fitting analysis  
-- `ms1_RT_analysis_df.csv`: RT stats vs. query RT  
-- `ms1_traces.pdf`: Gaussian fits per query/file  
-- `ms1_summary_traces.pdf`: All peaks per query  
+- `ms1_RT_analysis_df.csv`: RT stats vs. query RT
+- `ms1_traces.pdf`: All Gaussian fits per query/file
+- `ms1_summary_traces.pdf`: Summary of Gaussian fits per query
+- `ms1_summary_traces_inverse.pdf`: Summary of Gaussian fits per file
 - `ms1_summary_areas.pdf`: Peak areas per query  
-- `ms1_summary_areas_inverse.pdf`: Peak areas per file  
+- `ms1_summary_areas_inverse.pdf`: Peak areas per file
+- `consolidated_ms1_traces.png`: Consolidated image of all ms1_traces with Gaussian fit
 
 **MS2 Outputs**
 - `ms2_raw_df.csv`: Raw query results + metadata  
 - `ms2_analysis_df.csv`: Peak picking analysis  
 - `ms2_plots.pdf`: Scan intensities (lines connect shared MS1 scans)  
-- `ms2_summary_plots.pdf`: Top scan per query  
-- `ms2_cluster_plots_group.pdf`: Summary by query group (if defined)
+- `ms2_summary_plots.pdf`: Top scan per query
+- `ms2_cluster_plots.pdf`: Summary of MS2 analysis clustered by energy level if applicable
+- `ms2_cluster_plots_group.pdf`: Summary of MS2 analysis by query group (if defined)
 
 
 
