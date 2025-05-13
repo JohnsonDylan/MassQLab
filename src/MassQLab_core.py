@@ -25,7 +25,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=DeprecationWarning)
 pd.options.mode.chained_assignment = None  # default='warn'
 
-
+"""Cleans and resolves input filepath"""
 def find_file(filename):
     filename = os.path.normpath(filename)
     base_filename = os.path.basename(filename)
@@ -49,6 +49,7 @@ def find_file(filename):
     else: 
         return None
 
+"""Cleans and resolves input directory"""
 def find_dir(filedir):
     try:
         script_path = os.path.abspath(__file__)
@@ -71,11 +72,7 @@ def find_dir(filedir):
         return None
 
 
-
-
-
-"""Configure"""
-
+"""Load MassQLab config file and default arguments if not specified"""
 def configure_MassQLab(config_file_path="massqlab_config.json"):
     sys.stdout.write(f"\nInitialize MassQLab\n")
     sys.stdout.flush()
@@ -134,9 +131,7 @@ def configure_MassQLab(config_file_path="massqlab_config.json"):
     return data_directory_loc, queryfile_loc, metadata_file, metadata_filename_column, metadata_group_columns, kegg_path, convert_raw, msconvertexe, cache_setting, datasaver, analysis
     
 
-"""Create Queries from Query File"""
-
-# Function to extract RTMIN value from a given input string
+"""Function to extract RTMIN value from a given input string"""
 def extract_rtmin_value(input_string):
     pattern = r'RTMIN=(\d+(?:\.\d+)?)'
     match = re.search(pattern, input_string)
@@ -145,7 +140,7 @@ def extract_rtmin_value(input_string):
     else:
         return 0
 
-# Function to extract RTMAX value from a given input string
+"""Function to extract RTMAX value from a given input string"""
 def extract_rtmax_value(input_string):
     pattern = r'RTMAX=(\d+(?:\.\d+)?)'
     match = re.search(pattern, input_string)
@@ -153,7 +148,9 @@ def extract_rtmax_value(input_string):
         return float(match.group(1))
     else:
         return 99999
-        
+
+
+"""Create Queries from Query File"""
 def create_queries(queryfile, queries=None, query_groups=None, name_kegg_dict=None):
     if name_kegg_dict is None:
         name_kegg_dict = {}
@@ -224,8 +221,7 @@ def create_queries(queryfile, queries=None, query_groups=None, name_kegg_dict=No
     return queries, ms1_query_df, ms2_query_df, query_groups, name_kegg_dict
 
 
-"""Convert raw files"""
-
+"""Convert raw files using Proteowizard MSConvert"""
 def convert_raw_files(convert_raw, msconvertexe, data_directory, convert_count = 0):
     if convert_raw and msconvertexe:
         try:
@@ -265,11 +261,11 @@ def convert_raw_files(convert_raw, msconvertexe, data_directory, convert_count =
         sys.stdout.flush()
 
 
-"""Verify files are present"""
-
+"""Verify files are present in data directory and count"""
 def mzml_file_count(data_directory, file_count=0):
     try:
-        file_count = len(fnmatch.filter(os.listdir(data_directory), '*.mzml'))
+        # file_count = len(fnmatch.filter(os.listdir(data_directory), '*.mzml'))
+        file_count = len([f for f in os.listdir(data_directory) if f.lower().endswith('.mzml')])
         if file_count == 0:
             sys.stdout.write(f"\n\nWarning: No mzml files found in {data_directory}")
             sys.stdout.flush()
@@ -286,8 +282,7 @@ def mzml_file_count(data_directory, file_count=0):
     return file_count
 
 
-"""Query files"""
-
+"""Core function that applies queries to each file in data directory"""
 def query_files(data_directory, queries, datasaver, scan_attributes = True, cache_setting=True):
      #scan_attributes: True/False. Use True if multiple collision parameters per file. Kills performance.
     timestr = time.strftime("%Y_%m_%d_%H%M")

@@ -22,6 +22,7 @@ from PIL import Image as RLImage
 
 from MassQLab_core import *
 
+"""Ingest raw ms2 dataframe and generate visualization"""
 def plot_ms2(raw_df_ms2, data_directory, timestr):
     if not raw_df_ms2.empty:
         with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_plots.pdf") as pdf:
@@ -71,8 +72,7 @@ def plot_ms2(raw_df_ms2, data_directory, timestr):
 
 
 
-"""Analysis MS2"""
-
+"""Ingest raw ms2 dataframe and identify top peak (by collision type and energy if applicable)"""
 def process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, abundance_thresh_ms2=20):
     ms2_analysis_df = pd.DataFrame()
     ms2_analysis_df_list = []
@@ -143,8 +143,7 @@ def process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, abundanc
     return ms2_analysis_df
 
 
-"""Cluster Plot MS2"""
-
+"""visualize top ms2 peaks for each query clustered by filename, subclustered by energy"""
 def cluster_plot_ms2(ms2_analysis_df, data_directory, timestr):
     if not ms2_analysis_df.empty:
         with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots.pdf") as pdf:
@@ -170,11 +169,7 @@ def cluster_plot_ms2(ms2_analysis_df, data_directory, timestr):
     sys.stdout.flush()
 
 
-
-
-
-"""Cluster Plot MS2 alt"""
-
+"""visualize top ms2 peaks for each query clustered by energy, subclustered by filename"""
 def cluster_plot_ms2_alt(ms2_analysis_df, data_directory, timestr):
     if not ms2_analysis_df.empty:
         with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots_alt.pdf") as pdf:
@@ -201,10 +196,7 @@ def cluster_plot_ms2_alt(ms2_analysis_df, data_directory, timestr):
 
 
 
-
-
-"""Cluster Plot MS2 group"""
-
+"""visualize top ms2 peaks for all queries in query group (if present)"""
 def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr):
 
     def sort_dataframe_column_unique(df, column_name):
@@ -298,10 +290,7 @@ def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr):
 
 
 
-
-
-"""Data Plot MS2"""
-
+"""Create consolidated ms2 summary figures with traces and area barplot"""
 def summary_ms2(ms2_analysis_df, data_directory, timestr, abundance_thresh_ms2=20):
     if not ms2_analysis_df.empty:
         with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots.pdf") as pdf:
@@ -357,54 +346,7 @@ def summary_ms2(ms2_analysis_df, data_directory, timestr, abundance_thresh_ms2=2
 
 
 
-"Save MS2 Scan"""
-
-def save_ms2_scans_old(ms2_analysis_df, data_directory, timestr):
-    if not ms2_analysis_df.empty:
-        output_dir = os.path.join(data_directory, "MassQLab_Output", timestr, "scans")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        for filename_group_name, filename_group_df in ms2_analysis_df.groupby(["filename"]):
-            reader = mzml.MzML(os.path.join(data_directory, filename_group_name[0]))
-            filename_group_df = filename_group_df.dropna(subset=['scan'])
-            pdf_filename = os.path.join(output_dir, f"{filename_group_name[0]}_scans.pdf")
-
-            with PdfPages(pdf_filename) as pdf:
-                for group_name, group_df in filename_group_df.groupby(["query_name", "collision_type_energy"]):
-                    for index, row in group_df.iterrows():
-                        scan_num = int(row['scan']) - 1
-                        spectrum = reader[scan_num]
-                        mz, intensity = spectrum['m/z array'], spectrum['intensity array']
-                        height_min = np.max(intensity) / 20
-                        peaks, properties = find_peaks(intensity, height=height_min, prominence=height_min, distance=20)
-
-                        top_peaks_indices = np.argsort(properties["prominences"])[-5:]
-
-                        plt.figure(figsize=(10, 6))
-                        plt.plot(mz, intensity, label='Spectrum')
-                        plt.scatter(mz[peaks[top_peaks_indices]], intensity[peaks[top_peaks_indices]], color='red', label='Top Peaks')
-
-                        for peak_idx in top_peaks_indices:
-                            plt.annotate(f'{mz[peaks[peak_idx]]:.2f}', 
-                                         xy=(mz[peaks[peak_idx]], intensity[peaks[peak_idx]]), 
-                                         xytext=(0, 5), 
-                                         textcoords='offset points', 
-                                         ha='center', fontsize=8)
-
-                        plt.xlabel('m/z')
-                        plt.ylabel('Intensity')
-                        plot_title = f'{group_name[0]}, {group_name[1]}, scan:{scan_num}'
-                        plt.title(plot_title, fontsize=8)
-                        pdf.savefig()
-                        plt.close('all')
-
-
-
-
-
-"Save MS2 Scan"""
-
+"Load top ms2 scans and save as image"""
 def save_ms2_scans(ms2_analysis_df, data_directory, timestr):
     if not ms2_analysis_df.empty:
         output_dir = os.path.join(data_directory, "MassQLab_Output", timestr, "scans")
@@ -419,8 +361,8 @@ def save_ms2_scans(ms2_analysis_df, data_directory, timestr):
             with PdfPages(pdf_filename) as pdf:
                 for group_name, group_df in filename_group_df.groupby(["query_name", "energy"]):
                     for index, row in group_df.iterrows():
-                        scan_num = int(row['scan']) - 1
-                        spectrum = reader[scan_num]
+                        scan_num = int(row['scan'])
+                        spectrum = reader[scan_num - 1]
                         mz, intensity = spectrum['m/z array'], spectrum['intensity array']
                         height_min = np.max(intensity) / 20
                         peaks, properties = find_peaks(intensity, height=height_min, prominence=height_min, distance=20)
@@ -446,24 +388,13 @@ def save_ms2_scans(ms2_analysis_df, data_directory, timestr):
                         plt.close('all')
 
 
-
-
-
-"""Initialize ReportLab"""
-
+"""Initialize ReportLab functions"""
 def on_page(canvas, doc):
     page_num = canvas.getPageNumber()
     canvas.drawCentredString(A4[0]/2, 50, str(page_num))
 
 def on_page_landscape(canvas, doc):
   return on_page(canvas, doc)
-
-def fig2image(f):
-    buf = io.BytesIO()
-    f.savefig(buf, format='png', dpi=300)
-    buf.seek(0)
-    x, y = f.get_size_inches()
-    return Image(buf, x * inch, y * inch)
 
 def df2table(df):
     return Table(
@@ -484,11 +415,7 @@ def get_image(path, width):
     return Image(path, width=width, height=(width * aspect))
 
 
-
-
-
 """MS1 build reportlab doc"""
-
 def reportlab_ms1(ms1_analysis_df, data_directory, timestr):
     styles = getSampleStyleSheet()
     
@@ -547,10 +474,7 @@ def reportlab_ms1(ms1_analysis_df, data_directory, timestr):
 
 
 
-
-
-"""MS2 build reportlab doc. Create"""
-
+"""MS2 build reportlab doc"""
 def reportlab_ms2(ms2_analysis_df, data_directory, timestr):
     
     styles = getSampleStyleSheet()

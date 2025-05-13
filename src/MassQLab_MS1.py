@@ -22,18 +22,14 @@ from PIL import Image as RLImage
 
 from MassQLab_core import *
 
+"""interpolate values from xdata at arbitrary positions (given by indices) even if they fall between the original discrete positions."""
+def index_to_xdata(xdata, indices):
+        return interp1d(np.arange(len(xdata)), xdata)(indices)
+
+"""Core function that ingests raw ms1 dataframe, analyzes peaks, analyzes retention time, and outputs ms1 analysis dataframe and plots"""
 def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                      fwhm_thresh=1, rt_thresh=0.1, datapoint_thresh=5,
                      abundance_thresh_ms1=10, impute=True, export=True):
-
-    def index_to_xdata(xdata, indices):
-        return interp1d(np.arange(len(xdata)), xdata)(indices)
-
-    def gaussian(x, A, mu, sigma):
-        return A * np.exp(-((x - mu) ** 2) / (2 * sigma ** 2))
-
-    def generate_linear_array(rtmin, rtmax):
-        return np.linspace(rtmin - (rtmax - rtmin), rtmax + (rtmax - rtmin), 1000)
 
     ms1_analysis_df_list = []
     plots = {}
@@ -58,6 +54,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                     'query': {0: group_name[2]},
                     'peak_area': {0: None},
                     'peak_area_alt': {0: None},
+                    'peak_intensity': {0: None},
                     'fwhm': {0: None},
                     'rtmin': {0: None},
                     'rtmax': {0: None},
@@ -97,10 +94,11 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                     fwhm = right - left
                     measured_rt = (left + right) / 2
                     sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
-                    interpolated_rt = generate_linear_array(rtmin, rtmax)
-                    gaussian_y = gaussian(interpolated_rt, peak_y, measured_rt, sigma)
+                    interpolated_rt = np.linspace(rtmin - (rtmax - rtmin), rtmax + (rtmax - rtmin), 1000)
+                    gaussian_y = peak_y * np.exp(-((interpolated_rt - measured_rt) ** 2) / (2 * sigma ** 2))
                     peak_area = peak_y * sigma * np.sqrt(2 * np.pi)
                     peak_area_alt = trapezoid(ydata_all, x=xdata_all)
+                    peak_intensity = max(grouped_df.i)
 
                     ax.plot(interpolated_rt, gaussian_y, label='Gaussian Peak', color='r', lw=2)
                     ax.hlines(h, left, right, color='blue')
@@ -109,6 +107,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                     analysis_df_dict.update({
                         'peak_area': {0: peak_area},
                         'peak_area_alt': {0: peak_area_alt},
+                        'peak_intensity': {0: peak_intensity},
                         'fwhm': {0: fwhm},
                         'rtmin': {0: rtmin},
                         'rtmax': {0: rtmax},
@@ -223,9 +222,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
     return ms1_analysis_df
 
 
-
-"""RT Analysis MS1"""
-
+"""Ingest ms1 analysis dataframe and assess rentention times of peaks"""
 def rt_analysis_ms1(ms1_analysis_df, data_directory, timestr):
     if not ms1_analysis_df.empty:
         df = ms1_analysis_df.copy()
@@ -256,8 +253,7 @@ def rt_analysis_ms1(ms1_analysis_df, data_directory, timestr):
 
 
 
-"""Summary MS1 traces"""
-
+"""Ingest raw ms1 dataframe and merges traces (by query) for summary figures"""
 def summary_ms1_traces(raw_df_ms1, data_directory, timestr):
     if not raw_df_ms1.empty:
         output_dir = os.path.join(data_directory, "MassQLab_Output", timestr)
@@ -322,11 +318,7 @@ def summary_ms1_traces(raw_df_ms1, data_directory, timestr):
         sys.stdout.flush()
 
 
-
-
-
-"""Summary MS1 traces inverse"""
-
+"""Ingest raw ms1 dataframe and merges traces (by file) for summary figures"""
 def summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr):
     if not raw_df_ms1.empty:
         output_dir = os.path.join(data_directory, "MassQLab_Output", timestr)
@@ -389,8 +381,7 @@ def summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr):
         sys.stdout.flush()
 
 
-"""Summary MS1 Areas"""
-
+"""Ingest raw ms1 dataframe and plots peak areas (by query)"""
 def summary_ms1_areas(ms1_analysis_df, data_directory, timestr, abundance_thresh_ms1=10):
     if not ms1_analysis_df.empty:
         with PdfPages(data_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas.pdf") as pdf:
@@ -437,8 +428,7 @@ def summary_ms1_areas(ms1_analysis_df, data_directory, timestr, abundance_thresh
         sys.stdout.flush()
 
 
-"""Summary MS1 Areas Inverse"""
-
+"""Ingest raw ms1 dataframe and plots peak areas (by filename)"""
 def summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr, abundance_thresh_ms1 = 10):
     if not ms1_analysis_df.empty:
         with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse.pdf") as pdf:

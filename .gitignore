@@ -7,6 +7,7 @@ MassQLab_GUI/
 archive/
 local/
 massqlab_env/
+massqlab_env_dev/
 dist/
 build/
 .ipynb_checkpoints/

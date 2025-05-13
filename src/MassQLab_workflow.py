@@ -24,6 +24,7 @@ from MassQLab_core import *
 from MassQLab_MS1 import *
 from MassQLab_MS2 import *
 
+"""high-level initialization workflow sequence"""
 def initialize_config(data_directory, queryfile, metadata_file, metadata_filename_column,
                       metadata_group_columns, kegg_path, convert_raw, msconvertexe,
                       cache_setting, datasaver, analysis):
@@ -33,7 +34,7 @@ def initialize_config(data_directory, queryfile, metadata_file, metadata_filenam
             metadata_group_columns, kegg_path, convert_raw, msconvertexe,
             cache_setting, datasaver, analysis)
 
-    
+"""high-level core workflow sequence"""
 def core_workflow(data_directory, queryfile, datasaver, convert_raw, msconvertexe):
     raw_df_ms1 = pd.DataFrame()
     raw_df_ms2 = pd.DataFrame()
@@ -59,7 +60,7 @@ def core_workflow(data_directory, queryfile, datasaver, convert_raw, msconvertex
 
     return raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df
 
-
+"""high-level ms1 processing workflow sequence"""
 def process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr):
     ms1_analysis_df = process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr)
     rt_analysis_ms1(ms1_analysis_df, data_directory, timestr)
@@ -71,7 +72,7 @@ def process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr):
         summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr)
         reportlab_ms1(ms1_analysis_df, data_directory, timestr)
 
-
+"""high-level ms2 processing workflow sequence"""
 def process_ms2(raw_df_ms2, ms2_query_df, data_directory, timestr):
     ms2_analysis_df = process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr)
     plot_ms2(raw_df_ms2, data_directory, timestr)
@@ -84,7 +85,7 @@ def process_ms2(raw_df_ms2, ms2_query_df, data_directory, timestr):
         save_ms2_scans(ms2_analysis_df, data_directory, timestr)
         reportlab_ms2(ms2_analysis_df, data_directory, timestr)
 
-
+"""complete main workflow sequence"""
 def main(data_directory=None, queryfile=None, metadata_file=None, metadata_filename_column=None, metadata_group_columns=None, kegg_path=None, convert_raw=None, msconvertexe=None, cache_setting=None, datasaver=None, analysis=None):
     data_directory, queryfile, metadata_file, metadata_filename_column, metadata_group_columns, \
         kegg_path, convert_raw, msconvertexe, cache_setting, datasaver, analysis = initialize_config(
