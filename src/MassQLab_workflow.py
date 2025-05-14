@@ -25,17 +25,15 @@ from MassQLab_MS1 import *
 from MassQLab_MS2 import *
 
 """high-level initialization workflow sequence"""
-def initialize_config(data_directory, queryfile, metadata_file, metadata_filename_column,
-                      metadata_group_columns, kegg_path, convert_raw, msconvertexe,
-                      cache_setting, datasaver, analysis):
+def initialize_config(data_directory, queryfile, output_directory, convert_raw, msconvertexe,
+                      cache_setting, analysis):
     if not data_directory and not queryfile:
         return configure_MassQLab()
-    return (data_directory, queryfile, metadata_file, metadata_filename_column,
-            metadata_group_columns, kegg_path, convert_raw, msconvertexe,
-            cache_setting, datasaver, analysis)
+    return (data_directory, queryfile, output_directory, convert_raw, msconvertexe,
+            cache_setting, analysis)
 
 """high-level core workflow sequence"""
-def core_workflow(data_directory, queryfile, datasaver, convert_raw, msconvertexe):
+def core_workflow(data_directory, queryfile, convert_raw, msconvertexe, output_directory):
     raw_df_ms1 = pd.DataFrame()
     raw_df_ms2 = pd.DataFrame()
     ms1_query_df = pd.DataFrame()
@@ -51,7 +49,7 @@ def core_workflow(data_directory, queryfile, datasaver, convert_raw, msconvertex
             file_count = mzml_file_count(data_directory)
 
             try:
-                raw_df_ms1, raw_df_ms2, filename_groups, timestr = query_files(data_directory, queries, datasaver)
+                raw_df_ms1, raw_df_ms2, filename_groups, timestr = query_files(data_directory, queries, output_directory)
             except Exception as e:
                 print(f"Exception caught: {e}")
                 return pd.DataFrame(), pd.DataFrame(), "", pd.DataFrame(), pd.DataFrame()
@@ -61,55 +59,53 @@ def core_workflow(data_directory, queryfile, datasaver, convert_raw, msconvertex
     return raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df
 
 """high-level ms1 processing workflow sequence"""
-def process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr):
-    ms1_analysis_df = process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr)
-    rt_analysis_ms1(ms1_analysis_df, data_directory, timestr)
-    summary_ms1_traces(raw_df_ms1, data_directory, timestr)
-    summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr)
+def process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr, output_directory):
+    ms1_analysis_df = process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr, output_directory)
+    rt_analysis_ms1(ms1_analysis_df, data_directory, timestr, output_directory)
+    summary_ms1_traces(raw_df_ms1, data_directory, timestr, output_directory)
+    summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr, output_directory)
 
     if not ms1_analysis_df.empty:
-        summary_ms1_areas(ms1_analysis_df, data_directory, timestr)
-        summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr)
-        reportlab_ms1(ms1_analysis_df, data_directory, timestr)
+        summary_ms1_areas(ms1_analysis_df, data_directory, timestr, output_directory)
+        summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr, output_directory)
+        reportlab_ms1(ms1_analysis_df, data_directory, timestr, output_directory)
 
 """high-level ms2 processing workflow sequence"""
-def process_ms2(raw_df_ms2, ms2_query_df, data_directory, timestr):
-    ms2_analysis_df = process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr)
-    plot_ms2(raw_df_ms2, data_directory, timestr)
+def process_ms2(raw_df_ms2, ms2_query_df, data_directory, timestr, output_directory):
+    ms2_analysis_df = process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, output_directory)
+    plot_ms2(raw_df_ms2, data_directory, timestr, output_directory)
 
     if not ms2_analysis_df.empty:
-        cluster_plot_ms2(ms2_analysis_df, data_directory, timestr)
-        cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr)
-        summary_ms2(ms2_analysis_df, data_directory, timestr)
-        save_ms2_scans(ms2_analysis_df, data_directory, timestr)
-        reportlab_ms2(ms2_analysis_df, data_directory, timestr)
+        cluster_plot_ms2(ms2_analysis_df, data_directory, timestr, output_directory)
+        cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr, output_directory)
+        summary_ms2(ms2_analysis_df, data_directory, timestr, output_directory)
+        save_ms2_scans(ms2_analysis_df, data_directory, timestr, output_directory)
+        reportlab_ms2(ms2_analysis_df, data_directory, timestr, output_directory)
 
 """complete main workflow sequence"""
-def main(data_directory=None, queryfile=None, metadata_file=None, metadata_filename_column=None, metadata_group_columns=None, kegg_path=None, convert_raw=None, msconvertexe=None, cache_setting=None, datasaver=None, analysis=None):
-    data_directory, queryfile, metadata_file, metadata_filename_column, metadata_group_columns, \
-        kegg_path, convert_raw, msconvertexe, cache_setting, datasaver, analysis = initialize_config(
-            data_directory, queryfile, metadata_file, metadata_filename_column, 
-            metadata_group_columns, kegg_path, convert_raw, msconvertexe, 
-            cache_setting, datasaver, analysis)
+def main(data_directory=None, queryfile=None, output_directory=None, convert_raw=None, msconvertexe=None, cache_setting=None, analysis=None):
+    data_directory, queryfile, output_directory, convert_raw, msconvertexe, cache_setting, analysis = initialize_config(
+            data_directory, queryfile, output_directory, convert_raw, msconvertexe, 
+            cache_setting, analysis)
 
     raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df = core_workflow(
-        data_directory, queryfile, datasaver, convert_raw, msconvertexe)
+        data_directory, queryfile, convert_raw, msconvertexe, output_directory)
     if analysis:
         if not raw_df_ms1.empty:
-            process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr)
+            process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr, output_directory)
     
         if not raw_df_ms2.empty:
-            process_ms2(raw_df_ms2, ms2_query_df, data_directory, timestr)
+            process_ms2(raw_df_ms2, ms2_query_df, data_directory, timestr, output_directory)
 
     sys.stdout.write(f"\nRun Complete\n")
     sys.stdout.flush()
 
 def run():
-    data_directory, queryfile, metadata_file, metadata_filename_column, metadata_group_columns, kegg_path, convert_raw, msconvertexe, cache_setting, datasaver, analysis = configure_MassQLab()
+    data_directory, queryfile, output_directory, convert_raw, msconvertexe, cache_setting, analysis = configure_MassQLab()
     if data_directory and queryfile:
         user_input = input("\n\n1) Enter 1 to run analysis.\n2) Enter 2 to reinitialize.\nAny other input closes.\nInput: ")
         if user_input == '1':
-            main(data_directory, queryfile, metadata_file, metadata_filename_column, metadata_group_columns, kegg_path, convert_raw, msconvertexe, cache_setting, datasaver, analysis)
+            main(data_directory, queryfile, output_directory, convert_raw, msconvertexe, cache_setting, analysis)
         elif user_input == '2':
             run()
         else:

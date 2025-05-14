@@ -159,7 +159,7 @@ Results are saved in `MassQLab_Output` inside the defined `data_directory`, orga
 - `ms1_summary_traces_inverse.pdf`: Summary of Gaussian fits per file
 - `ms1_summary_areas.pdf`: Peak areas per query  
 - `ms1_summary_areas_inverse.pdf`: Peak areas per file
-- `consolidated_ms1_traces.png`: Consolidated image of all ms1_traces with Gaussian fit
+- `ms1_consolidated_traces.png`: Consolidated image of all ms1_traces with Gaussian fit
 
 **MS2 Outputs**
 - `ms2_raw_df.csv`: Raw query results + metadata  

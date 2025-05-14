@@ -95,15 +95,11 @@ def configure_MassQLab(config_file_path="massqlab_config.json"):
 
     # Extract configuration values with defaults if not found
     data_directory = config.get('data_directory', 'data/')
+    
     queryfile = config.get('queryfile', 'MassQL_Queries.json')
-    metadata_file = config.get('metadata_file', False)
-    metadata_filename_column = config.get('metadata_filename_column', "CORE_Filename")
-    metadata_group_columns = config.get('metadata_group_columns', "USER_Column1")
-    kegg_path = config.get('kegg_path', False)
     convert_raw = config.get('convert_raw', False)
     msconvertexe = config.get('msconvert_exe', False)
     cache_setting = config.get('cache', True)
-    datasaver = config.get('datasaver', False)
     analysis = config.get('analysis', True)
 
     # Check if data_directory and queryfile paths exist
@@ -117,6 +113,15 @@ def configure_MassQLab(config_file_path="massqlab_config.json"):
         # sys.stdout.flush()
         pass
 
+    output_directory = config.get('output_directory', data_directory)
+    output_directory = os.path.normpath(output_directory)
+    output_directory_loc = find_dir(output_directory)
+    # if output_directory_loc:
+    #     sys.stdout.write(f"\noutput_directory: {os.path.normpath(output_directory_loc)}\n")
+    #     sys.stdout.flush()
+    # else:
+    #     pass
+        
     queryfile = os.path.normpath(queryfile)
     queryfile_loc = find_file(queryfile)
     if queryfile_loc:
@@ -128,7 +133,7 @@ def configure_MassQLab(config_file_path="massqlab_config.json"):
         pass
     sys.stdout.write(f"\n")
     sys.stdout.flush()
-    return data_directory_loc, queryfile_loc, metadata_file, metadata_filename_column, metadata_group_columns, kegg_path, convert_raw, msconvertexe, cache_setting, datasaver, analysis
+    return data_directory_loc, queryfile_loc, output_directory_loc, convert_raw, msconvertexe, cache_setting, analysis
     
 
 """Function to extract RTMIN value from a given input string"""
@@ -283,7 +288,7 @@ def mzml_file_count(data_directory, file_count=0):
 
 
 """Core function that applies queries to each file in data directory"""
-def query_files(data_directory, queries, datasaver, scan_attributes = True, cache_setting=True):
+def query_files(data_directory, queries, output_directory, scan_attributes = True, cache_setting=True):
      #scan_attributes: True/False. Use True if multiple collision parameters per file. Kills performance.
     timestr = time.strftime("%Y_%m_%d_%H%M")
 
@@ -371,13 +376,13 @@ def query_files(data_directory, queries, datasaver, scan_attributes = True, cach
         
         results_df = pd.DataFrame()
         if raw_ms1_df_list:
-            if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/scans/"):
-                os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/scans/")
+            if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr):
+                os.makedirs(output_directory + "/MassQLab_Output/"+timestr)
             raw_df_ms1 = pd.concat(raw_ms1_df_list)
             
         if raw_ms2_df_list:
-            if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/scans/"):
-                os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/scans/")
+            if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr):
+                os.makedirs(output_directory + "/MassQLab_Output/"+timestr)
             raw_df_ms2 = pd.concat(raw_ms2_df_list)
             if not raw_df_ms2.empty:
                 raw_df_ms2['collision_type'] = raw_df_ms2['collision_type'].apply(lambda x: 'CID' if x == 'collision-induced dissociation' else x)
@@ -385,11 +390,11 @@ def query_files(data_directory, queries, datasaver, scan_attributes = True, cach
                 raw_df_ms2['collision_type_energy'] = raw_df_ms2['collision_type'].astype(str) + "__" + raw_df_ms2['energy'].astype(str)
             
         if not raw_df_ms1.empty:
-            raw_df_ms1.to_csv(data_directory + "/MassQLab_Output/"+timestr+"/ms1_raw_df.csv")
+            raw_df_ms1.to_csv(output_directory + "/MassQLab_Output/"+timestr+"/ms1_raw_df.csv")
             sys.stdout.write(f"\nCreated raw_df_ms1 and exported as csv.") 
             sys.stdout.flush()
         if not raw_df_ms2.empty:
-            raw_df_ms2.to_csv(data_directory + "/MassQLab_Output/"+timestr+"/ms2_raw_df.csv")
+            raw_df_ms2.to_csv(output_directory + "/MassQLab_Output/"+timestr+"/ms2_raw_df.csv")
             sys.stdout.write(f"\nCreated raw_df_ms2 and exported as csv.") 
             sys.stdout.flush()
 

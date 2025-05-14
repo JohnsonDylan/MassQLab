@@ -48,7 +48,7 @@ peak_area_alt inegrates the total signal of the returned data without regard for
 peak_intensity records the y-maximum of the returned data without regard for peak picking.
 """
 
-def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
+def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr, output_directory,
                      fwhm_thresh=1, rt_thresh=0.1, datapoint_thresh=5,
                      abundance_thresh_ms1=10, impute=True, export=True):
 
@@ -59,10 +59,10 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
         unique_filenames = raw_df_ms1['filename'].unique()
         unique_queries = raw_df_ms1['query'].unique()
 
-        output_dir = os.path.join(data_directory, "MassQLab_Output", timestr, "ms1_traces")
+        output_dir = os.path.join(output_directory, "MassQLab_Output", timestr, "ms1_traces")
         os.makedirs(output_dir, exist_ok=True)
 
-        pdf_path = os.path.join(data_directory, "MassQLab_Output", timestr, "ms1_traces.pdf")
+        pdf_path = os.path.join(output_directory, "MassQLab_Output", timestr, "ms1_traces.pdf")
         with PdfPages(pdf_path) as pdf:
             for group_name, grouped_df in raw_df_ms1.groupby(['filename', 'query_name', 'query']):
                 if len(grouped_df) < 5:
@@ -203,7 +203,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
 
     # Export CSV
     if export and not ms1_analysis_df.empty:
-        output_csv = os.path.join(data_directory, "MassQLab_Output", timestr, "ms1_analysis_df.csv")
+        output_csv = os.path.join(output_directory, "MassQLab_Output", timestr, "ms1_analysis_df.csv")
         ms1_analysis_df.to_csv(output_csv, index=False)
         sys.stdout.write("\nCreated ms1_analysis_df and exported as CSV.")
     else:
@@ -232,7 +232,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
                     ax.axis('off')
 
         plt.tight_layout()
-        consolidated_path = os.path.join(data_directory, "MassQLab_Output", timestr, "consolidated_ms1_traces.png")
+        consolidated_path = os.path.join(output_directory, "MassQLab_Output", timestr, "ms1_consolidated_traces.png")
         plt.savefig(consolidated_path)
         plt.close()
         
@@ -240,7 +240,7 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr,
 
 
 """Ingest ms1 analysis dataframe and assess rentention times of peaks"""
-def rt_analysis_ms1(ms1_analysis_df, data_directory, timestr):
+def rt_analysis_ms1(ms1_analysis_df, data_directory, timestr, output_directory):
     if not ms1_analysis_df.empty:
         df = ms1_analysis_df.copy()
         df.loc[~df['peak_valid'], 'measured_RT'] = None
@@ -260,7 +260,7 @@ def rt_analysis_ms1(ms1_analysis_df, data_directory, timestr):
         pivot_df['valid_%'] = (pivot_df[original_columns].count(axis=1) / len(original_columns)) * 100
         
         if not pivot_df.empty:
-            pivot_df.to_csv(data_directory + "/MassQLab_Output/"+timestr+"/ms1_RT_analysis_df.csv")
+            pivot_df.to_csv(output_directory + "/MassQLab_Output/"+timestr+"/ms1_RT_analysis_df.csv")
             sys.stdout.write(f"\nCreated ms1_RT_analysis_df and exported as csv.") 
             sys.stdout.flush()
             
@@ -271,9 +271,9 @@ def rt_analysis_ms1(ms1_analysis_df, data_directory, timestr):
 
 
 """Ingest raw ms1 dataframe and merges traces (by query) for summary figures"""
-def summary_ms1_traces(raw_df_ms1, data_directory, timestr):
+def summary_ms1_traces(raw_df_ms1, data_directory, timestr, output_directory):
     if not raw_df_ms1.empty:
-        output_dir = os.path.join(data_directory, "MassQLab_Output", timestr)
+        output_dir = os.path.join(output_directory, "MassQLab_Output", timestr)
         pdf_path = os.path.join(output_dir, "ms1_summary_traces.pdf")
         all_data_dir = os.path.join(output_dir, "ms1_summary_traces", "all_data")
         rt_range_dir = os.path.join(output_dir, "ms1_summary_traces", "rt_range")
@@ -336,9 +336,9 @@ def summary_ms1_traces(raw_df_ms1, data_directory, timestr):
 
 
 """Ingest raw ms1 dataframe and merges traces (by file) for summary figures"""
-def summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr):
+def summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr, output_directory):
     if not raw_df_ms1.empty:
-        output_dir = os.path.join(data_directory, "MassQLab_Output", timestr)
+        output_dir = os.path.join(output_directory, "MassQLab_Output", timestr)
         pdf_path = os.path.join(output_dir, "ms1_summary_traces_inverse.pdf")
         all_data_dir = os.path.join(output_dir, "ms1_summary_traces_inverse", "all_data")
         rt_range_dir = os.path.join(output_dir, "ms1_summary_traces_inverse", "rt_range")
@@ -399,9 +399,9 @@ def summary_ms1_traces_inverse(raw_df_ms1, data_directory, timestr):
 
 
 """Ingest raw ms1 dataframe and plots peak areas (by query)"""
-def summary_ms1_areas(ms1_analysis_df, data_directory, timestr, abundance_thresh_ms1=10):
+def summary_ms1_areas(ms1_analysis_df, data_directory, timestr, output_directory, abundance_thresh_ms1=10):
     if not ms1_analysis_df.empty:
-        with PdfPages(data_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas.pdf") as pdf:
+        with PdfPages(output_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas.pdf") as pdf:
             for i, (frame_group, frame_data) in enumerate(ms1_analysis_df.groupby(['query_name'])):
                 colors_plot = plt.rcParams["axes.prop_cycle"]()
                 
@@ -436,9 +436,9 @@ def summary_ms1_areas(ms1_analysis_df, data_directory, timestr, abundance_thresh
                 plt.tight_layout(rect=[0, 0, 1, 0.96])
         
                 pdf.savefig()
-                if not os.path.exists(data_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas/"):
-                    os.makedirs(data_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas/")
-                plt.savefig(data_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas/" + plt_title + '.png')
+                if not os.path.exists(output_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas/"):
+                    os.makedirs(output_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas/")
+                plt.savefig(output_directory + "/MassQLab_Output/" + timestr + "/ms1_summary_areas/" + plt_title + '.png')
                 plt.close('all')
         
         sys.stdout.write(f"\nCreated ms1_summary_areas.") 
@@ -446,9 +446,9 @@ def summary_ms1_areas(ms1_analysis_df, data_directory, timestr, abundance_thresh
 
 
 """Ingest raw ms1 dataframe and plots peak areas (by filename)"""
-def summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr, abundance_thresh_ms1 = 10):
+def summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr, output_directory, abundance_thresh_ms1 = 10):
     if not ms1_analysis_df.empty:
-        with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse.pdf") as pdf:
+        with PdfPages(output_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse.pdf") as pdf:
             for i, (frame_group, frame_data) in enumerate(ms1_analysis_df.groupby(['filename'])):
                 colors_plot = plt.rcParams["axes.prop_cycle"]()
                 
@@ -480,12 +480,96 @@ def summary_ms1_areas_inverse(ms1_analysis_df, data_directory, timestr, abundanc
                 plt.tight_layout(rect=[0, 0, 1, 0.96])
         
                 pdf.savefig()
-                if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse/"):
-                    os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse/")
-                plt.savefig(data_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse/"+plt_title+'.png')
+                if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse/"):
+                    os.makedirs(output_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse/")
+                plt.savefig(output_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas_inverse/"+plt_title+'.png')
                 # plt.show()
                 plt.close('all')
         sys.stdout.write(f"\nCreated ms1_summary_areas_inverse.") 
         sys.stdout.flush()
 
+
+"""Initialize ReportLab functions"""
+def on_page(canvas, doc):
+    page_num = canvas.getPageNumber()
+    canvas.drawCentredString(A4[0]/2, 50, str(page_num))
+
+def on_page_landscape(canvas, doc):
+  return on_page(canvas, doc)
+
+def df2table(df):
+    return Table(
+      [[Paragraph(col) for col in df.columns]] + df.values.tolist(), 
+      style=[
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('LINEBELOW',(0,0), (-1,0), 1, colors.black),
+        ('INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
+        ('BOX', (0,0), (-1,-1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0,0), (-1,-1), [colors.lightgrey, colors.white])],
+      hAlign = 'LEFT')
+
+def get_image(path, width):
+    img = utils.ImageReader(path)
+    iw, ih = img.getSize()
+    aspect = ih / float(iw)
+    return Image(path, width=width, height=(width * aspect))
+
+    
+"""MS1 build reportlab doc"""
+def reportlab_ms1(ms1_analysis_df, data_directory, timestr, output_directory):
+    styles = getSampleStyleSheet()
+    
+    padding = dict(
+      leftPadding=24, 
+      rightPadding=24,
+      topPadding=24,
+      bottomPadding=24)
+    
+    portrait_frame = Frame(0, 0, *A4, **padding)
+    landscape_frame = Frame(0, 0, *landscape(A4), **padding)
+    
+    portrait_template = PageTemplate(
+      id='portrait', 
+      frames=portrait_frame,
+      onPage=on_page)
+    
+    landscape_template = PageTemplate(
+      id='landscape', 
+      frames=landscape_frame, 
+      onPage=on_page_landscape)
+
+    if not ms1_analysis_df.empty:
+        for group_name, grouped_df in ms1_analysis_df.groupby(['query_name', 'query']):
+        
+            pdfname = output_directory + "/MassQLab_Output/"+timestr+"/ms1_reports/"+group_name[0]+"_ms1_report.pdf"
+            doc = BaseDocTemplate(
+              pdfname,
+              pageTemplates=[
+                portrait_template,
+                landscape_template])
+        
+            image_path1 = output_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_traces/rt_range/"+group_name[0]+".png"
+            image_path2 = output_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas/"+group_name[0]+".png"
+        
+            grouped_df1 = grouped_df[['filename', 'peak_area', 'fwhm', 'abundance_valid']]
+            grouped_df2 = grouped_df[['filename', 'measured_RT', 'rt_error', 'peak_valid']]
+        
+            story = [
+                Paragraph('MS1 Report: '+str(group_name[0]), styles['Heading1']),
+                Paragraph(str(group_name[1]), styles['Heading2']),
+                get_image(image_path1, width=7*inch),
+                get_image(image_path2, width=5*inch),
+                PageBreak(),
+                df2table(grouped_df1),
+                PageBreak(),
+                df2table(grouped_df2)
+            ]
+        
+            if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr+"/ms1_reports/"):
+                    os.makedirs(output_directory + "/MassQLab_Output/"+timestr+"/ms1_reports/")
+                
+            doc.build(story)
+        sys.stdout.write(f"\nCreated ms1_reports.") 
+        sys.stdout.flush()
 

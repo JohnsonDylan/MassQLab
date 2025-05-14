@@ -23,9 +23,9 @@ from PIL import Image as RLImage
 from MassQLab_core import *
 
 """Ingest raw ms2 dataframe and generate visualization"""
-def plot_ms2(raw_df_ms2, data_directory, timestr):
+def plot_ms2(raw_df_ms2, data_directory, timestr, output_directory):
     if not raw_df_ms2.empty:
-        with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_plots.pdf") as pdf:
+        with PdfPages(output_directory + "/MassQLab_Output/"+timestr+"/ms2_plots.pdf") as pdf:
             
             raw_df_ms2['collision_type'] = raw_df_ms2['collision_type'].apply(lambda x: 'CID' if x == 'collision-induced dissociation' else x)
             raw_df_ms2['collision_type'] = raw_df_ms2['collision_type'].apply(lambda x: 'HCD' if x == 'beam-type collision-induced dissociation' else x)
@@ -63,9 +63,9 @@ def plot_ms2(raw_df_ms2, data_directory, timestr):
             
                 ax.legend(title='CTE')
                 pdf.savefig()
-                if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/ms2_plots/"):
-                    os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/ms2_plots/")
-                plt.savefig(data_directory + "/MassQLab_Output/"+timestr+"/ms2_plots/"+plt_title+'.png')
+                if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr+"/ms2_plots/"):
+                    os.makedirs(output_directory + "/MassQLab_Output/"+timestr+"/ms2_plots/")
+                plt.savefig(output_directory + "/MassQLab_Output/"+timestr+"/ms2_plots/"+plt_title+'.png')
                 # plt.show()
                 plt.close('all')
     sys.stdout.write(f"\nCreated ms2 plots.")
@@ -73,7 +73,7 @@ def plot_ms2(raw_df_ms2, data_directory, timestr):
 
 
 """Ingest raw ms2 dataframe and identify top peak (by collision type and energy if applicable)"""
-def process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, abundance_thresh_ms2=20):
+def process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, output_directory, abundance_thresh_ms2=20):
     ms2_analysis_df = pd.DataFrame()
     ms2_analysis_df_list = []
 
@@ -131,7 +131,7 @@ def process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, abundanc
         ms2_analysis_df = result_xdf
 
     # === Export to CSV ===
-    output_dir = os.path.join(data_directory, "MassQLab_Output", timestr)
+    output_dir = os.path.join(output_directory, "MassQLab_Output", timestr)
     os.makedirs(output_dir, exist_ok=True)
     if not ms2_analysis_df.empty:
         ms2_analysis_df.to_csv(os.path.join(output_dir, "ms2_analysis_df.csv"), index=False)
@@ -144,9 +144,9 @@ def process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, abundanc
 
 
 """visualize top ms2 peaks for each query clustered by filename, subclustered by energy"""
-def cluster_plot_ms2(ms2_analysis_df, data_directory, timestr):
+def cluster_plot_ms2(ms2_analysis_df, data_directory, timestr, output_directory):
     if not ms2_analysis_df.empty:
-        with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots.pdf") as pdf:
+        with PdfPages(output_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots.pdf") as pdf:
             for group_name, grouped_df in ms2_analysis_df.groupby('collision_type'):
                 for g_group_name, g_grouped_df in grouped_df.groupby(['query_name', 'query']):
                     if not grouped_df.empty and len(grouped_df) > 0:
@@ -161,16 +161,16 @@ def cluster_plot_ms2(ms2_analysis_df, data_directory, timestr):
                         # plt.title(f'{g_group_name[1]}', fontsize=8)
                         pdf.savefig()
                         
-                        if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots/"):
-                            os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots/")
-                        plt.savefig(data_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots/"+plt_title+'.png')
+                        if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots/"):
+                            os.makedirs(output_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots/")
+                        plt.savefig(output_directory + "/MassQLab_Output/"+timestr+"/ms2_cluster_plots/"+plt_title+'.png')
                         plt.close('all')
     sys.stdout.write(f"\nCreated ms2 cluster plot.")
     sys.stdout.flush()
 
 
 """visualize top ms2 peaks for all queries in query group (if present)"""
-def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr):
+def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr, output_directory):
 
     def sort_dataframe_column_unique(df, column_name):
         def find_lowest_number(s):
@@ -182,8 +182,8 @@ def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr):
         return sorted_unique_values
 
     if not ms2_analysis_df.empty:
-        output_dir = os.path.join(data_directory, "MassQLab_Output", timestr, "ms2_cluster_plots_group")
-        output_dir_2 = os.path.join(data_directory, "MassQLab_Output", timestr)
+        output_dir = os.path.join(output_directory, "MassQLab_Output", timestr, "ms2_cluster_plots_group")
+        output_dir_2 = os.path.join(output_directory, "MassQLab_Output", timestr)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
@@ -264,9 +264,9 @@ def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr):
 
 
 """Create consolidated ms2 summary figures with traces and area barplot"""
-def summary_ms2(ms2_analysis_df, data_directory, timestr, abundance_thresh_ms2=20):
+def summary_ms2(ms2_analysis_df, data_directory, timestr, output_directory, abundance_thresh_ms2=20):
     if not ms2_analysis_df.empty:
-        with PdfPages(data_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots.pdf") as pdf:
+        with PdfPages(output_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots.pdf") as pdf:
             for i, (frame_group, frame_data) in enumerate(ms2_analysis_df.groupby(['query_name', 'collision_type_energy'])):
                 colors_plot = plt.rcParams["axes.prop_cycle"]()
                 plt.figure(figsize=(10, 6))
@@ -307,9 +307,9 @@ def summary_ms2(ms2_analysis_df, data_directory, timestr, abundance_thresh_ms2=2
                 plt.tight_layout(rect=[0, 0, 1, 0.96])
         
                 pdf.savefig()
-                if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/"):
-                    os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/")
-                plt.savefig(data_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/"+plt_title+'.png')
+                if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/"):
+                    os.makedirs(output_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/")
+                plt.savefig(output_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/"+plt_title+'.png')
                 # plt.show()
                 plt.close('all')
         sys.stdout.write(f"\nCreated ms2_summary_plots.") 
@@ -320,9 +320,9 @@ def summary_ms2(ms2_analysis_df, data_directory, timestr, abundance_thresh_ms2=2
 
 
 "Load top ms2 scans and save as image"""
-def save_ms2_scans(ms2_analysis_df, data_directory, timestr):
+def save_ms2_scans(ms2_analysis_df, data_directory, timestr, output_directory):
     if not ms2_analysis_df.empty:
-        output_dir = os.path.join(data_directory, "MassQLab_Output", timestr, "scans")
+        output_dir = os.path.join(output_directory, "MassQLab_Output", timestr, "scans")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
@@ -388,67 +388,8 @@ def get_image(path, width):
     return Image(path, width=width, height=(width * aspect))
 
 
-"""MS1 build reportlab doc"""
-def reportlab_ms1(ms1_analysis_df, data_directory, timestr):
-    styles = getSampleStyleSheet()
-    
-    padding = dict(
-      leftPadding=24, 
-      rightPadding=24,
-      topPadding=24,
-      bottomPadding=24)
-    
-    portrait_frame = Frame(0, 0, *A4, **padding)
-    landscape_frame = Frame(0, 0, *landscape(A4), **padding)
-    
-    portrait_template = PageTemplate(
-      id='portrait', 
-      frames=portrait_frame,
-      onPage=on_page)
-    
-    landscape_template = PageTemplate(
-      id='landscape', 
-      frames=landscape_frame, 
-      onPage=on_page_landscape)
-
-    if not ms1_analysis_df.empty:
-        for group_name, grouped_df in ms1_analysis_df.groupby(['query_name', 'query']):
-        
-            pdfname = data_directory + "/MassQLab_Output/"+timestr+"/ms1_reports/"+group_name[0]+"_ms1_report.pdf"
-            doc = BaseDocTemplate(
-              pdfname,
-              pageTemplates=[
-                portrait_template,
-                landscape_template])
-        
-            image_path1 = data_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_traces/rt_range/"+group_name[0]+".png"
-            image_path2 = data_directory + "/MassQLab_Output/"+timestr+"/ms1_summary_areas/"+group_name[0]+".png"
-        
-            grouped_df1 = grouped_df[['filename', 'peak_area', 'fwhm', 'abundance_valid']]
-            grouped_df2 = grouped_df[['filename', 'measured_RT', 'rt_error', 'peak_valid']]
-        
-            story = [
-                Paragraph('MS1 Report: '+str(group_name[0]), styles['Heading1']),
-                Paragraph(str(group_name[1]), styles['Heading2']),
-                get_image(image_path1, width=7*inch),
-                get_image(image_path2, width=5*inch),
-                PageBreak(),
-                df2table(grouped_df1),
-                PageBreak(),
-                df2table(grouped_df2)
-            ]
-        
-            if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/ms1_reports/"):
-                    os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/ms1_reports/")
-                
-            doc.build(story)
-        sys.stdout.write(f"\nCreated ms1_reports.") 
-        sys.stdout.flush()
-
-
-
 """MS2 build reportlab doc"""
-def reportlab_ms2(ms2_analysis_df, data_directory, timestr):
+def reportlab_ms2(ms2_analysis_df, data_directory, timestr, output_directory):
     
     styles = getSampleStyleSheet()
     
@@ -478,7 +419,7 @@ def reportlab_ms2(ms2_analysis_df, data_directory, timestr):
                      Paragraph(str(group_name[1]), styles['Heading2'])
             ]
             
-            pdfname = data_directory + "/MassQLab_Output/"+timestr+"/ms2_reports/"+group_name[0]+"_ms2_report.pdf"
+            pdfname = output_directory + "/MassQLab_Output/"+timestr+"/ms2_reports/"+group_name[0]+"_ms2_report.pdf"
             doc = BaseDocTemplate(
               pdfname,
               pageTemplates=[
@@ -487,7 +428,7 @@ def reportlab_ms2(ms2_analysis_df, data_directory, timestr):
         
             for group_name2, grouped_df2 in grouped_df.groupby('collision_type_energy'):    
                 
-                image_path1 = data_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/"+group_name[0]+"_"+group_name2+".png"
+                image_path1 = output_directory + "/MassQLab_Output/"+timestr+"/ms2_summary_plots/"+group_name[0]+"_"+group_name2+".png"
         
                 grouped_data = grouped_df2[['filename', 'i', 'rt', 'abundance_error', 'abundance_valid']]
         
@@ -500,8 +441,8 @@ def reportlab_ms2(ms2_analysis_df, data_directory, timestr):
                     df2table(grouped_data),
                     PageBreak(),])
                 
-            if not os.path.exists(data_directory + "/MassQLab_Output/"+timestr+"/ms2_reports/"):
-                    os.makedirs(data_directory + "/MassQLab_Output/"+timestr+"/ms2_reports/")
+            if not os.path.exists(output_directory + "/MassQLab_Output/"+timestr+"/ms2_reports/"):
+                    os.makedirs(output_directory + "/MassQLab_Output/"+timestr+"/ms2_reports/")
                 
             doc.build(story)
         sys.stdout.write(f"\nCreated ms2_reports.") 

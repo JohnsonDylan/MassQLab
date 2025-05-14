@@ -26,6 +26,7 @@ class RedirectText:
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.geometry("1200x600")
         self.title("MassQLab")
         self.console = scrolledtext.ScrolledText(self, state='disabled', height=14)
         sys.stdout = RedirectText(self.console)
@@ -39,7 +40,7 @@ class App(tk.Tk):
 
         # Retrieve configuration from configure_MassQLab
         configurations = configure_MassQLab()
-        config_keys = ['data_directory', 'queryfile', 'metadata_file', 'metadata_filename_column', 'metadata_group_columns', 'kegg_path', 'convert_raw', 'msconvertexe', 'use_cache', 'datasaver', 'analysis']
+        config_keys = ['data_directory', 'queryfile', 'output_directory', 'convert_raw', 'msconvertexe', 'use_cache', 'analysis']
         self.grid_rowconfigure(len(config_keys)+1, weight=1)
 
         self.entries = {}
@@ -65,7 +66,7 @@ class App(tk.Tk):
                 # Instead of placing now, store it with the intended row index
                 checkbuttons.append((i, checkbutton))
                 row_offset += 1  # Increment offset for each checkbutton found
-            elif key in ['metadata_file', 'metadata_filename_column', 'metadata_group_columns', 'kegg_path', 'datasaver']:
+            elif key in ['placeholder']:
                 pass
             else:
                 tk.Label(self, text=key).grid(row=i - row_offset, column=0, sticky='w')
@@ -86,8 +87,8 @@ class App(tk.Tk):
                 entry.insert(0, value)
                 self.entries[key] = entry
     
-                if key in ['data_directory', 'queryfile', 'msconvertexe']:
-                    btn_text = 'Browse Directory' if key == 'data_directory' else 'Browse File'
+                if key in ['data_directory', 'queryfile', 'output_directory', 'msconvertexe']:
+                    btn_text = 'Browse Directory' if key in ['data_directory', 'output_directory'] else 'Browse File'
                     tk.Button(self, text=btn_text, command=lambda k=key: self.browse(k)).grid(row=i - row_offset, column=2)
         
         # Place checkbuttons at the bottom
@@ -124,7 +125,7 @@ class App(tk.Tk):
             # Fallback to the home directory if current_value is not a valid path
             initial_dir = home_dir
     
-        if key in ['data_directory']:
+        if key in ['data_directory', 'output_directory']:
             selected_directory = os.path.normpath(filedialog.askdirectory(initialdir=initial_dir))
             if selected_directory and selected_directory != '.':
                 self.entries[key].delete(0, tk.END)
@@ -143,14 +144,10 @@ class App(tk.Tk):
         args = [
             self.entries['data_directory'].get(),
             self.entries['queryfile'].get(),
-            None,  # metadata_file (you skipped it in UI)
-            None,  # metadata_filename_column
-            None,  # metadata_group_columns
-            None,  # kegg_path
+            self.entries['output_directory'].get(),
             self.check_vars['convert_raw'].get(),
             self.entries['msconvertexe'].get(),
             self.check_vars['use_cache'].get(),
-            None,  # datasaver
             self.check_vars['analysis'].get()
         ]
     
