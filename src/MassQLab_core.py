@@ -113,14 +113,14 @@ def configure_MassQLab(config_file_path="massqlab_config.json"):
         # sys.stdout.flush()
         pass
 
-    output_directory = config.get('output_directory', data_directory)
-    output_directory = os.path.normpath(output_directory)
-    output_directory_loc = find_dir(output_directory)
-    # if output_directory_loc:
-    #     sys.stdout.write(f"\noutput_directory: {os.path.normpath(output_directory_loc)}\n")
-    #     sys.stdout.flush()
-    # else:
-    #     pass
+    output_directory = config.get('output_directory')
+    if not output_directory or output_directory in ['None', '', None, False]:
+        output_directory_loc = data_directory_loc
+    else:
+        output_directory = os.path.normpath(output_directory)
+        output_directory_loc = find_dir(output_directory)
+        sys.stdout.write(f"\noutput_directory: {os.path.normpath(output_directory_loc)}\n")
+        sys.stdout.flush()
         
     queryfile = os.path.normpath(queryfile)
     queryfile_loc = find_file(queryfile)

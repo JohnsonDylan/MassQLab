@@ -1,9 +1,18 @@
 [
 {
-"name": "2-Methylbutyryl-L-carnitine", 
-"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ= 246.16998:TOLERANCEPPM=2.5 AND RTMIN=4.03 AND RTMAX=4.33"},
+"name": "L-Carnitine", 
+"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ= 162.11246:TOLERANCEPPM=2.5 AND RTMIN=0.35 AND RTMAX=0.65"
+},
 {
-"name": "2-Methylbutyryl-L-carnitine_ms2", 
-"query": "QUERY scaninfo(MS2DATA) FILTER MS1MZ= 246.16998:TOLERANCEPPM=2.5 AND RTMIN=4.03 AND RTMAX=4.33"
+"name": "Malonyl-L-carnitine", 
+"query": "QUERY scaninfo(MS1DATA) FILTER MS1MZ= 248.11286:TOLERANCEPPM=2.5 AND RTMIN=0.55 AND RTMAX=0.85"
+},
+{
+"name": "L-Carnitine_MS2", 
+"query": "QUERY scaninfo(MS2DATA) FILTER MS1MZ= 162.11246:TOLERANCEPPM=2.5 AND RTMIN=0.35 AND RTMAX=0.65"
+},
+{
+"name": "L-Carnitine_MS2PREC", 
+"query": "QUERY scaninfo(MS2DATA) FILTER MS2PREC= 162.11246:TOLERANCEPPM=2.5 AND RTMIN=0.35 AND RTMAX=0.65"
 }
 ]

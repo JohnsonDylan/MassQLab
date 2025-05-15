@@ -47,6 +47,7 @@ Other entry points (e.g., MassQLab_notebook.ipynb, MassQLab_GUI.py, MassQLab_GUI
 {
   "data_directory": "path/to/data",
   "queryfile": "path/to/queryfile",
+  "output_directory": false,
   "analysis": true,
   "cache_setting": true,
   "convert_raw": false,
@@ -148,7 +149,7 @@ Navigate to the `notebooks/` directory and open the desired notebook to begin wo
 
 ## Results
 
-Results are saved in `MassQLab_Output` inside the defined `data_directory`, organized by timestamp.
+Results are saved in `MassQLab_Output` inside the defined `output_directory` (`data_directory` is used by default), organized by timestamp.
 
 **MS1 Outputs**
 - `ms1_raw_df.csv`: Raw query results + metadata  
@@ -172,6 +173,9 @@ Results are saved in `MassQLab_Output` inside the defined `data_directory`, orga
 
 
 ## Config File Advanced
+
+- **`output_directory`**  
+  Saves output to custom directory. Othewrise saved within data_directory.
 
 - **`analysis`**  
   Whether to run downstream analysis on results returned from the MassQL queries (`true` or `false`).

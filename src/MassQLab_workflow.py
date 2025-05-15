@@ -42,6 +42,10 @@ def core_workflow(data_directory, queryfile, convert_raw, msconvertexe, output_d
 
     if data_directory and queryfile:
         sys.stdout.write(f"\nRun Start\n")
+        
+        if not output_directory or output_directory in ['None', '', None, False]:
+            output_directory = data_directory
+        
         queries, ms1_query_df, ms2_query_df, query_groups, name_kegg_dict = create_queries(queryfile)
 
         if queries:
@@ -56,7 +60,7 @@ def core_workflow(data_directory, queryfile, convert_raw, msconvertexe, output_d
     else:
         sys.stdout.write(f"\nNo data_directory and/or queryfile defined\n")
 
-    return raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df
+    return raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df, output_directory
 
 """high-level ms1 processing workflow sequence"""
 def process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr, output_directory):
@@ -88,7 +92,7 @@ def main(data_directory=None, queryfile=None, output_directory=None, convert_raw
             data_directory, queryfile, output_directory, convert_raw, msconvertexe, 
             cache_setting, analysis)
 
-    raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df = core_workflow(
+    raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df, output_directory = core_workflow(
         data_directory, queryfile, convert_raw, msconvertexe, output_directory)
     if analysis:
         if not raw_df_ms1.empty:

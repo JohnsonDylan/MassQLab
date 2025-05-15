@@ -181,7 +181,11 @@ def cluster_plot_ms2_group(ms2_analysis_df, data_directory, timestr, output_dire
         sorted_unique_values = sorted(unique_values, key=find_lowest_number)
         return sorted_unique_values
 
-    if not ms2_analysis_df.empty:
+    if (
+        not ms2_analysis_df.empty
+        and 'group' in ms2_analysis_df.columns
+        and ms2_analysis_df['group'].notna().any()
+    ):
         output_dir = os.path.join(output_directory, "MassQLab_Output", timestr, "ms2_cluster_plots_group")
         output_dir_2 = os.path.join(output_directory, "MassQLab_Output", timestr)
         if not os.path.exists(output_dir):
