@@ -79,7 +79,7 @@ You should now see `(env)` at the start of your terminal prompt.
 
 The following may be sufficient:
 ```bash
-pip install jupyterlab massql reportlab openpyxl matplotlib
+pip install jupyterlab massql reportlab openpyxl matplotlib pyopenms
 ```
 
 Otherwise use:

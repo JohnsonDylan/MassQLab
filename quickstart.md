@@ -11,9 +11,6 @@ if using virtualenv:
 ```bash
 py -3.9 -m venv env
 env\Scripts\activate
-
-pip install jupyterlab massql reportlab openpyxl matplotlib
-pip install -r requirements.txt
 ```
 
 if using conda:
@@ -24,7 +21,7 @@ conda activate env
 
 ### 3. Dependendencies
 ```bash
-pip install jupyterlab massql reportlab openpyxl matplotlib
+pip install jupyterlab massql reportlab openpyxl matplotlib pyopenms
 ```
 OR
 ```bash

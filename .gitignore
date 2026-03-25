@@ -10,6 +10,8 @@ massqlab_env/
 massqlab_env_dev/
 dist/
 build/
+src_dev/
+notebooks_dev/
 data/MassQLab_Output/
 .ipynb_checkpoints/
 __pycache__/
