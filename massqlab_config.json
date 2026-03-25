@@ -3,7 +3,7 @@
 	"queryfile" : "MassQL_Queries.csv",
 	"output_directory": false,
 	"analysis" : true,
-	"cache_setting" : true,
+	"cache_setting" : false,
 	"convert_raw" : false,
 	"msconvertexe" : false
 }

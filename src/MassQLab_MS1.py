@@ -204,29 +204,46 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr, output_d
     # Export CSV
     if export and not ms1_analysis_df.empty:
         output_dir = os.path.join(output_directory, "MassQLab_Output", timestr)
-
+    
         output_csv = os.path.join(output_dir, "ms1_analysis_df.csv")
         ms1_analysis_df.to_csv(output_csv, index=False)
         sys.stdout.write("\nCreated ms1_analysis_df and exported as CSV.")
-
-        peak_area_df = (
-            ms1_analysis_df
-            .pivot_table(
-                index='query_name',
-                columns='filename',
-                values='peak_area',
-                aggfunc='first'
+    
+        # Build a new query-by-file matrix using peak_area_alt
+        # Keep only the columns that came from the user's input query file
+        input_query_cols = [
+            col for col in ms1_query_df.columns
+            if col not in {'mslevel', 'rtmin', 'rtmax'}
+        ]
+    
+        if not ms1_query_df.empty and {'name', 'query'}.issubset(ms1_query_df.columns):
+            query_template_df = (
+                ms1_query_df[input_query_cols]
+                .drop_duplicates(subset=['name', 'query'])
+                .copy()
             )
-            .reset_index()
-        )
-
-        peak_area_csv = os.path.join(output_dir, "ms1_peak_areas.csv")
-        peak_area_df.to_csv(peak_area_csv, index=False)
-        sys.stdout.write("\nCreated ms1_peak_areas and exported as CSV.")
-
+    
+            peak_area_alt_wide_df = (
+                ms1_analysis_df[['query_name', 'query', 'filename', 'peak_area_alt']]
+                .drop_duplicates(subset=['query_name', 'query', 'filename'], keep='last')
+                .pivot(index=['query_name', 'query'], columns='filename', values='peak_area_alt')
+                .reset_index()
+                .rename(columns={'query_name': 'name'})
+            )
+    
+            ms1_peak_area_alt_matrix_df = query_template_df.merge(
+                peak_area_alt_wide_df,
+                on=['name', 'query'],
+                how='left'
+            )
+    
+            peak_area_alt_matrix_csv = os.path.join(output_dir, "compounds_massqlab.csv")
+            ms1_peak_area_alt_matrix_df.to_csv(peak_area_alt_matrix_csv, index=False)
+            sys.stdout.write("\nCreated compounds_massqlab and exported as CSV.")
+    
     else:
         sys.stdout.write("\nms1_analysis_df is empty or export skipped.")
-
+    
     sys.stdout.flush()
 
     # === Create consolidated grid of plots ===

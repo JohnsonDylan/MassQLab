@@ -203,8 +203,8 @@ def create_queries(queryfile, queries=None, query_groups=None, name_kegg_dict=No
                         name_kegg_dict.update({entry['name']: entry.get('KEGG')})
                     if entry.get('group'):
                         query_groups.update({entry['name']: entry.get('group')})
-                    else:
-                        entry.update({"group": None})
+                    # else:
+                    #     entry.update({"group": None})
                     queries.append(entry)
                 else:
                     sys.stdout.write(f"\n\nInvalid query:\n {entry}\n")
