@@ -94,14 +94,17 @@ def process_ms2_data(raw_df_ms2, ms2_query_df, data_directory, timestr, output_d
         ms2_analysis_df = pd.concat(ms2_analysis_df_list).reset_index(drop=True)
 
     if not ms2_analysis_df.empty and not ms2_query_df.empty:
-        ms2_analysis_df = pd.merge(
+        merged_df = pd.merge(
             ms2_analysis_df,
             ms2_query_df.rename(columns={'name': 'query_name'}),
             on='query_name',
             how='inner',
             suffixes=('', '_duplicate')
         )
-        ms2_analysis_df.drop(columns=[col for col in ms2_analysis_df.columns if "_duplicate" in col], inplace=True)
+        ms2_analysis_df = merged_df.loc[
+            :,
+            ~merged_df.columns.str.endswith('_duplicate')
+        ]
 
     if not ms2_analysis_df.empty and 'abundance' in ms2_analysis_df.columns:
         ms2_analysis_df['abundance_error'] = np.where(

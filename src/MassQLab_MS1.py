@@ -155,13 +155,17 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr, output_d
 
     # Merge with query dataframe
     if not ms1_analysis_df.empty and not ms1_query_df.empty:
-        ms1_analysis_df = pd.merge(
+        merged_df = pd.merge(
             ms1_analysis_df,
             ms1_query_df.rename(columns={'name': 'query_name'}),
             on='query_name',
             how='inner',
             suffixes=('', '_duplicate')
-        ).drop(columns=[col for col in ms1_analysis_df.columns if '_duplicate' in col])
+        )
+        ms1_analysis_df = merged_df.loc[
+            :,
+            ~merged_df.columns.str.endswith('_duplicate')
+        ]
 
     # QC Check
     if not ms1_analysis_df.empty:
