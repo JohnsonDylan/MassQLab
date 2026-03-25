@@ -33,7 +33,7 @@ def initialize_config(data_directory, queryfile, output_directory, convert_raw, 
             cache_setting, analysis)
 
 """high-level core workflow sequence"""
-def core_workflow(data_directory, queryfile, convert_raw, msconvertexe, output_directory):
+def core_workflow(data_directory, queryfile, convert_raw, msconvertexe, output_directory, cache_setting=True):
     raw_df_ms1 = pd.DataFrame()
     raw_df_ms2 = pd.DataFrame()
     ms1_query_df = pd.DataFrame()
@@ -53,7 +53,12 @@ def core_workflow(data_directory, queryfile, convert_raw, msconvertexe, output_d
             file_count = mzml_file_count(data_directory)
 
             try:
-                raw_df_ms1, raw_df_ms2, filename_groups, timestr = query_files(data_directory, queries, output_directory)
+                raw_df_ms1, raw_df_ms2, filename_groups, timestr = query_files(
+                    data_directory,
+                    queries,
+                    output_directory,
+                    cache_setting=cache_setting,
+                )
             except Exception as e:
                 print(f"Exception caught: {e}")
                 return pd.DataFrame(), pd.DataFrame(), "", pd.DataFrame(), pd.DataFrame()
@@ -93,7 +98,7 @@ def main(data_directory=None, queryfile=None, output_directory=None, convert_raw
             cache_setting, analysis)
 
     raw_df_ms1, raw_df_ms2, timestr, ms1_query_df, ms2_query_df, output_directory = core_workflow(
-        data_directory, queryfile, convert_raw, msconvertexe, output_directory)
+        data_directory, queryfile, convert_raw, msconvertexe, output_directory, cache_setting)
     if analysis:
         if not raw_df_ms1.empty:
             process_ms1(raw_df_ms1, ms1_query_df, data_directory, timestr, output_directory)

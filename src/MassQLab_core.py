@@ -19,6 +19,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Frame, PageTemplate, BaseDocTemplate, Image, Table, TableStyle, Paragraph, NextPageTemplate, PageBreak
 from massql import msql_fileloading, msql_engine
 from PIL import Image as RLImage
+import pyopenms as oms
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -95,11 +96,13 @@ def configure_MassQLab(config_file_path="massqlab_config.json"):
 
     # Extract configuration values with defaults if not found
     data_directory = config.get('data_directory', 'data/')
-    
     queryfile = config.get('queryfile', 'MassQL_Queries.json')
     convert_raw = config.get('convert_raw', False)
-    msconvertexe = config.get('msconvert_exe', False)
-    cache_setting = config.get('cache', True)
+    
+    # Prefer the names used in your config/README, but keep backward compatibility
+    msconvertexe = config.get('msconvertexe', config.get('msconvert_exe', False))
+    cache_setting = config.get('cache_setting', config.get('cache', True))
+    
     analysis = config.get('analysis', True)
 
     # Check if data_directory and queryfile paths exist
@@ -288,7 +291,7 @@ def mzml_file_count(data_directory, file_count=0):
 
 
 """Core function that applies queries to each file in data directory"""
-def query_files(data_directory, queries, output_directory, scan_attributes = True, cache_setting=True):
+def query_files(data_directory, queries, output_directory, scan_attributes = True, cache_setting=True, legacy_version=False):
      #scan_attributes: True/False. Use True if multiple collision parameters per file. Kills performance.
     timestr = time.strftime("%Y_%m_%d_%H%M")
 
@@ -312,9 +315,8 @@ def query_files(data_directory, queries, output_directory, scan_attributes = Tru
     counter = 0
     fail_log = []
 
-    filename_list = sorted(glob.iglob(os.path.join(data_directory, '*.mzML')))
-    filename_list = sorted([os.path.normpath(path) for path in filename_list])
-    # filename_list = sorted([path.replace('\\', '/') for path in filename_list])
+    filename_list = sorted(glob.iglob(os.path.join(data_directory, "*.mzML")))
+    filename_list = [os.path.normpath(path) for path in filename_list]
 
     if queries:
         # filename_list = filename_list[::-1]
@@ -329,7 +331,15 @@ def query_files(data_directory, queries, output_directory, scan_attributes = Tru
             counter += 1
             sys.stdout.write(f"\nProcessing file {counter}: {filename_base}")
             sys.stdout.flush()
-            ms1_df, ms2_df = msql_fileloading.load_data(filename, cache=cache_setting)
+            # ms1_df, ms2_df = msql_fileloading.load_data(filename, cache=cache_setting)
+            if legacy_version:
+                ms1_df, ms2_df = msql_fileloading.load_data(filename, cache=cache_setting)
+            else:
+                exp = oms.MSExperiment()
+                mzml_file = oms.MzMLFile()
+                mzml_file.setLogType(oms.LogType.CMD)
+                mzml_file.load(filename, exp)
+                ms1_df, ms2_df = exp.get_massql_df()
             if scan_attributes: 
                 mzml_reader = mzml.MzML(filename)
             for i, query in enumerate(queries):

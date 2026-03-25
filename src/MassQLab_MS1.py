@@ -203,9 +203,27 @@ def process_ms1_data(raw_df_ms1, ms1_query_df, data_directory, timestr, output_d
 
     # Export CSV
     if export and not ms1_analysis_df.empty:
-        output_csv = os.path.join(output_directory, "MassQLab_Output", timestr, "ms1_analysis_df.csv")
+        output_dir = os.path.join(output_directory, "MassQLab_Output", timestr)
+
+        output_csv = os.path.join(output_dir, "ms1_analysis_df.csv")
         ms1_analysis_df.to_csv(output_csv, index=False)
         sys.stdout.write("\nCreated ms1_analysis_df and exported as CSV.")
+
+        peak_area_df = (
+            ms1_analysis_df
+            .pivot_table(
+                index='query_name',
+                columns='filename',
+                values='peak_area',
+                aggfunc='first'
+            )
+            .reset_index()
+        )
+
+        peak_area_csv = os.path.join(output_dir, "ms1_peak_areas.csv")
+        peak_area_df.to_csv(peak_area_csv, index=False)
+        sys.stdout.write("\nCreated ms1_peak_areas and exported as CSV.")
+
     else:
         sys.stdout.write("\nms1_analysis_df is empty or export skipped.")
 

@@ -40,7 +40,8 @@ class App(tk.Tk):
 
         # Retrieve configuration from configure_MassQLab
         configurations = configure_MassQLab()
-        config_keys = ['data_directory', 'queryfile', 'output_directory', 'convert_raw', 'msconvertexe', 'use_cache', 'analysis']
+        config_keys = ['data_directory', 'queryfile', 'output_directory',
+               'convert_raw', 'msconvertexe', 'cache_setting', 'analysis']
         self.grid_rowconfigure(len(config_keys)+1, weight=1)
 
         self.entries = {}
@@ -58,7 +59,7 @@ class App(tk.Tk):
         row_offset = 0  # Offset to track where to start placing checkbuttons
 
         for i, key in enumerate(config_keys):
-            if key in ['convert_raw', 'use_cache', 'analysis']:
+            if key in ['convert_raw', 'cache_setting', 'analysis']:
                 self.check_vars[key] = tk.BooleanVar(value=configurations[i])
                 self.check_vars[key].trace_add('write', lambda name, index, mode, var_name=key: log_change(var_name, index, mode))
 
@@ -147,7 +148,7 @@ class App(tk.Tk):
             self.entries['output_directory'].get(),
             self.check_vars['convert_raw'].get(),
             self.entries['msconvertexe'].get(),
-            self.check_vars['use_cache'].get(),
+            self.check_vars['cache_setting'].get(),
             self.check_vars['analysis'].get()
         ]
     
