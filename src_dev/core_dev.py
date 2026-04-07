@@ -135,8 +135,8 @@ def massql_query_resolver(
     if not normalized_queries:
         raise ValueError("No valid queries were found.")
 
-    query_names = [q["name"] for q in normalized_queries]
-    duplicate_names = pd.Series(query_names)[pd.Series(query_names).duplicated()].unique().tolist()
+    names = [q["name"] for q in normalized_queries]
+    duplicate_names = pd.Series(names)[pd.Series(names).duplicated()].unique().tolist()
     if duplicate_names:
         raise ValueError(
             "Query names must be unique. Duplicate query names found: "
@@ -152,12 +152,12 @@ def build_query_metadata_df(queries: Sequence[dict[str, Any]]) -> pd.DataFrame:
     This is the single source of truth for query metadata throughout the project.
     """
     if not queries:
-        return pd.DataFrame(columns=["query_name", "query", "mslevel"])
+        return pd.DataFrame(columns=["name", "query", "mslevel"])
 
-    metadata_df = pd.DataFrame(queries).rename(columns={"name": "query_name"})
+    metadata_df = pd.DataFrame(queries).rename(columns={"name": "name"})
 
-    ordered_cols = ["query_name", "query", "mslevel"] + [
-        c for c in metadata_df.columns if c not in {"query_name", "query", "mslevel"}
+    ordered_cols = ["name", "query", "mslevel"] + [
+        c for c in metadata_df.columns if c not in {"name", "query", "mslevel"}
     ]
     return metadata_df.loc[:, ordered_cols]
 
@@ -168,7 +168,7 @@ def build_result_metadata(query: Mapping[str, Any]) -> dict[str, Any]:
     Preserves all extra fields from massql_query_resolver.
     """
     metadata = {
-        "query_name": query["name"],
+        "name": query["name"],
         "query": query["query"],
         "mslevel": query["mslevel"],
     }
@@ -356,26 +356,23 @@ def massqlab_area(
     queries: Sequence[dict[str, Any]],
 ) -> pd.DataFrame:
     """
-    Collapse raw MS1 results on source_file-query_name, summing the 'i' column.
+    Collapse raw MS1 results to one row per name and one column per source_file,
+    summing the 'i' column.
 
     Keeps only:
-    - source_file
-    - query_name
-    - summed i
-    - query metadata from massql_query_resolver
+    - name
+    - query metadata from build_query_metadata_df
+    - one column per source_file containing summed intensity
 
-    Drops any other columns originating from results_df.
+    Includes only name values present in massqlab_raw_ms1.
     """
     metadata_df = build_query_metadata_df(queries)
-
-    area_cols = ["source_file", "query_name", "i"] + [
-        c for c in metadata_df.columns if c != "query_name"
-    ]
+    metadata_cols = ["name"] + [c for c in metadata_df.columns if c != "name"]
 
     if massqlab_raw_ms1.empty:
-        return pd.DataFrame(columns=area_cols)
+        return pd.DataFrame(columns=metadata_cols)
 
-    required_cols = {"source_file", "query_name", "i"}
+    required_cols = {"source_file", "name", "i"}
     missing = required_cols - set(massqlab_raw_ms1.columns)
     if missing:
         raise KeyError(
@@ -384,17 +381,27 @@ def massqlab_area(
 
     area_df = (
         massqlab_raw_ms1
-        .groupby(["source_file", "query_name"], sort=False, as_index=False)["i"]
+        .groupby(["name", "source_file"], sort=False, as_index=False)["i"]
         .sum()
+        .pivot(index="name", columns="source_file", values="i")
+        .reset_index()
         .merge(
             metadata_df,
-            on="query_name",
+            on="name",
             how="left",
-            validate="many_to_one",
+            validate="one_to_one",
         )
     )
 
-    return area_df.loc[:, area_cols]
+    area_df.columns.name = None
+
+    source_file_cols = [c for c in area_df.columns if c not in metadata_cols]
+    area_df = area_df.rename(columns={c: f"{c} area" for c in source_file_cols})
+
+    renamed_source_file_cols = [f"{c} area" for c in source_file_cols]
+    area_df[renamed_source_file_cols] = area_df[renamed_source_file_cols].fillna(0)
+
+    return area_df.loc[:, metadata_cols + renamed_source_file_cols]
 
 
 # ---------------------------
@@ -439,7 +446,52 @@ def write_queries_json(queries: Sequence[dict[str, Any]], output_path: Path) -> 
     return output_path
 
 
+def _queries_to_dataframe(queries: Any) -> pd.DataFrame:
+    """
+    Convert queries into a tabular form suitable for an Excel sheet.
+    """
+    if isinstance(queries, pd.DataFrame):
+        return queries.copy()
 
+    if isinstance(queries, dict):
+        return pd.json_normalize(queries, sep=".")
+
+    if isinstance(queries, list):
+        if len(queries) == 0:
+            return pd.DataFrame()
+
+        if all(isinstance(x, dict) for x in queries):
+            return pd.json_normalize(queries, sep=".")
+
+        return pd.DataFrame({"value": queries})
+
+    return pd.DataFrame({"value": [queries]})
+
+
+def write_excel_bundle(
+    queries: Any,
+    raw_ms1_df: pd.DataFrame,
+    raw_ms2_df: pd.DataFrame,
+    area_df: pd.DataFrame,
+    output_path: Path,
+) -> Path:
+    """
+    Write all outputs into a single Excel workbook with multiple sheets.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    queries_df = _queries_to_dataframe(queries)
+
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        queries_df.to_excel(writer, sheet_name="normalized_queries", index=False)
+        raw_ms1_df.to_excel(writer, sheet_name="massqlab_raw_ms1", index=False)
+        raw_ms2_df.to_excel(writer, sheet_name="massqlab_raw_ms2", index=False)
+        area_df.to_excel(writer, sheet_name="massqlab_area", index=False)
+
+    return output_path
+
+    
 # ---------------------------
 # Main
 # ---------------------------
@@ -484,9 +536,14 @@ def massqlab_main(
         output_directory=output_directory,
     )
 
-    write_queries_json(queries, run_output_dir / "normalized_queries.json")
-    write_dataframe(raw_ms1_df, run_output_dir / "massqlab_raw_ms1", write_parquet=write_parquet)
-    write_dataframe(raw_ms2_df, run_output_dir / "massqlab_raw_ms2", write_parquet=write_parquet)
-    write_dataframe(area_df, run_output_dir / "massqlab_area", write_parquet=write_parquet)
+    excel_path = run_output_dir / "massqlab_export_bundle.xlsx"
 
+    write_excel_bundle(
+        queries=queries,
+        raw_ms1_df=raw_ms1_df,
+        raw_ms2_df=raw_ms2_df,
+        area_df=area_df,
+        output_path=excel_path,
+    )
+    
     return raw_ms1_df, raw_ms2_df, area_df, run_output_dir
