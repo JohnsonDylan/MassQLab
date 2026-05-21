@@ -69,7 +69,7 @@ def run_workflow(
     x_col: str = "rt",
     y_col: str = "i",
     center_method: str | None = "median",
-    log_transform: bool = False,
+    log_transform: bool = True,
     abs_limit: float = 1,
 ) -> Path:
     query_file = resolve_query_file(query_file_or_directory)
@@ -202,8 +202,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--log-transform",
-        action="store_true",
-        help="Apply log2(x + 1) transform in heatmaps. Default matches notebook_dev: False.",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Apply log2(x + 1) transform in heatmaps. Enabled by default; use --no-log-transform to disable.",
     )
 
     parser.add_argument(

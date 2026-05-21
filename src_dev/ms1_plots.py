@@ -31,25 +31,29 @@ def plot_area_heatmap(
 
     plot_df = df[[row_label_col, query_col] + value_cols].copy()
 
-    row_labels = (plot_df[row_label_col].astype(str))
+    value_label = value_suffix.strip().replace("_", " ")
+
+    row_labels = plot_df[row_label_col].astype(str)
 
     matrix_df = plot_df[value_cols].copy()
-
     renamed_cols = [c[: -len(value_suffix)] for c in value_cols]
     matrix_df.columns = renamed_cols
     matrix_df.index = row_labels
 
     if log_transform:
         matrix_df = np.log2(matrix_df + 1)
+        base_label = f"log2({value_label} + 1)"
+    else:
+        base_label = value_label
 
     if center_method == "mean":
         matrix_df = matrix_df.sub(matrix_df.mean(axis=1, skipna=True), axis=0)
-        cbar_label = "row mean-centered log2(area + 1)"
+        cbar_label = f"row mean-centered {base_label}"
     elif center_method == "median":
         matrix_df = matrix_df.sub(matrix_df.median(axis=1, skipna=True), axis=0)
-        cbar_label = "row median-centered log2(area + 1)"
+        cbar_label = f"row median-centered {base_label}"
     else:
-        cbar_label = "log2(area + 1)" if log_transform else "area"
+        cbar_label = base_label
 
     if figsize is None:
         width = max(6, 0.45 * len(matrix_df.columns) + 2)
@@ -73,7 +77,7 @@ def plot_area_heatmap(
     )
 
     ax.set_xlabel("Source file")
-    ax.set_ylabel("Name | Query")
+    ax.set_ylabel("Name")
     ax.set_title(os.path.splitext(os.path.basename(output_file))[0])
 
     plt.xticks(rotation=45, ha="right")
