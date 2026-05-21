@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "massqlab"
+version = "0.1.0"
+description = "MassQLab command-line workflow for MassQL-based mass spectrometry analysis"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "massql==2026.3.14",
+    "pyopenms==3.4.0",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scipy>=1.13",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+    "openpyxl>=3.1",
+]
+
+[project.scripts]
+massqlab = "src_dev.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src_dev*"]
