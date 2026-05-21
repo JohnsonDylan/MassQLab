@@ -23,10 +23,19 @@ Option A: conda
     conda create -n massqlab python=3.9
     conda activate massqlab
 
-Option B: Python venv on macOS/Linux
+Option B: Python venv on Windows
 
-    python -m venv .venv
-    source .venv/bin/activate
+```
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+Option C: Python venv on macOS/Linux
+
+```
+python -m venv .venv
+source .venv/bin/activate
+```
 
 3. Update installation tools
 ```
