@@ -11,11 +11,11 @@ Example:
     massqlab MassQL_Queries.csv data/
 
 1. Clone the repository
-
-    git clone https://github.com/JohnsonDylan/MassQLab.git
-    cd MassQLab
-    git checkout dev
-
+```
+git clone https://github.com/JohnsonDylan/MassQLab.git
+cd MassQLab
+git checkout dev
+```
 2. Create and activate a Python environment
 
 Option A: conda
@@ -29,9 +29,9 @@ Option B: Python venv on macOS/Linux
     source .venv/bin/activate
 
 3. Update installation tools
-
-    python -m pip install --upgrade pip setuptools wheel
-
+```
+python -m pip install --upgrade pip setuptools wheel
+```
 4. Install MassQLab
 
 From the root of the cloned repository:
@@ -39,9 +39,9 @@ From the root of the cloned repository:
     pip install -e .
 
 5. Confirm the command is available
-
-    massqlab --help
-
+```
+massqlab --help
+```
 You should see help text for the massqlab command.
 
 6. Prepare input files
