@@ -331,7 +331,7 @@ def raw_ms1_df_analysis(raw_ms1_df, min_points=5, x_col="rt", y_col="i"):
             long_results.append(result)
             continue
 
-        peak_area = amplitude * sigma * np.sqrt(2 * np.pi)
+        peak_area = np.log2(amplitude * sigma * np.sqrt(2 * np.pi) + 1)
 
         rt_error = np.nan
         if pd.notna(rtmin) and pd.notna(rtmax):

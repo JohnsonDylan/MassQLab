@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
-
+import numpy as np
 import pandas as pd
 from pandas.api.types import is_scalar
 import pyopenms as oms
@@ -400,6 +400,7 @@ def massqlab_area(
 
     renamed_source_file_cols = [f"{c} area" for c in source_file_cols]
     area_df[renamed_source_file_cols] = area_df[renamed_source_file_cols].fillna(0)
+    area_df[renamed_source_file_cols] = np.log2(area_df[renamed_source_file_cols] + 1)
 
     return area_df.loc[:, metadata_cols + renamed_source_file_cols]
 
