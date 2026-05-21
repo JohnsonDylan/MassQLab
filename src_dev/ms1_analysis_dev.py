@@ -2,13 +2,8 @@ import re
 import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
-
-
-import re
-import numpy as np
-import pandas as pd
 from scipy.signal import find_peaks, peak_widths
-
+from pathlib import Path
 
 def fit_single_trace(grouped_df, min_points=5, x_col="rt", y_col="i"):
     source_file = grouped_df["source_file"].iloc[0]
@@ -181,7 +176,30 @@ def fit_single_trace(grouped_df, min_points=5, x_col="rt", y_col="i"):
     return result
 
 
-def raw_ms1_df_analysis(raw_ms1_df, min_points=5, x_col="rt", y_col="i"):
+def write_ms1_analysis_excel(
+    peak_area_df,
+    peak_rt_df,
+    peak_gaussian_df,
+    output_path,
+):
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        peak_area_df.to_excel(writer, sheet_name="peak_area", index=False)
+        peak_rt_df.to_excel(writer, sheet_name="peak_rt", index=False)
+        peak_gaussian_df.to_excel(writer, sheet_name="peak_gaussian", index=False)
+
+    return output_path
+
+
+def raw_ms1_df_analysis(
+    raw_ms1_df,
+    min_points=5,
+    x_col="rt",
+    y_col="i",
+    output_path=None,
+):
     long_results = []
 
     for (source_file, name, query), grouped_df in raw_ms1_df.groupby(
@@ -359,6 +377,15 @@ def raw_ms1_df_analysis(raw_ms1_df, min_points=5, x_col="rt", y_col="i"):
         peak_area_df = pd.DataFrame(columns=["name", "query"])
         peak_rt_df = pd.DataFrame(columns=["name", "query"])
         peak_gaussian_df = pd.DataFrame(columns=["name", "query"])
+
+        if output_path is not None:
+            write_ms1_analysis_excel(
+                peak_area_df=peak_area_df,
+                peak_rt_df=peak_rt_df,
+                peak_gaussian_df=peak_gaussian_df,
+                output_path=output_path,
+            )
+
         return peak_area_df, peak_rt_df, peak_gaussian_df
 
     peak_area_df = (
@@ -418,5 +445,13 @@ def raw_ms1_df_analysis(raw_ms1_df, min_points=5, x_col="rt", y_col="i"):
     ]
     
     peak_rt_df = peak_rt_df.loc[:, ["name", "query"] + peak_rt_cols + rt_error_cols]
+
+    if output_path is not None:
+        write_ms1_analysis_excel(
+            peak_area_df=peak_area_df,
+            peak_rt_df=peak_rt_df,
+            peak_gaussian_df=peak_gaussian_df,
+            output_path=output_path,
+        )
 
     return peak_area_df, peak_rt_df, peak_gaussian_df
